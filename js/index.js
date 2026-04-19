@@ -87,8 +87,8 @@ const firebaseConfig = {
   projectId: "couple-youngwoo-jisun-20260205",
   storageBucket: "couple-youngwoo-jisun-20260205.firebasestorage.app",
   messagingSenderId: "365911720629",
-  appId: "1:365911720629:web:3f30f8c9ed33b53fbaf4fc",
-  measurementId: "G-HE01FBT363"
+  appId: "1:365911720629:web:5c84c8755b6e90bcbaf4fc",
+  measurementId: "G-9REC1WL612"
 };
 
 const app = initializeApp(firebaseConfig);
