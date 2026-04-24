@@ -706,6 +706,165 @@ body{
   color: rgba(37,99,235,.9);
 }
 
+/* ============ Couple Diary ============ */
+.diaryGrid{
+  align-items:start;
+}
+.card--diaryCalendar,
+.card--diaryEditor{
+  min-height:100%;
+}
+.diaryCalendar__head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.diaryCalendar__month{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:800;
+}
+.diaryLegend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:14px;
+  margin-bottom:12px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+}
+.diaryLegend__item{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.diaryWeekdays{
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:8px;
+  margin-bottom:8px;
+}
+.diaryWeekdays span{
+  text-align:center;
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+}
+.diaryCalendar{
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:8px;
+}
+.diaryCell{
+  min-height:72px;
+  padding:10px 8px;
+  border-radius:16px;
+  border:1px solid rgba(20,25,38,.08);
+  background:rgba(255,255,255,.72);
+  box-shadow:var(--shadow2);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  align-items:flex-start;
+  cursor:pointer;
+  transition:transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.diaryCell:hover{
+  transform:translateY(-1px);
+}
+.diaryCell--empty{
+  visibility:hidden;
+  pointer-events:none;
+}
+.diaryCell--today{
+  border-color:rgba(255,94,168,.45);
+}
+.diaryCell--active{
+  background:linear-gradient(180deg, rgba(255,94,168,.16), rgba(124,92,255,.08));
+  border-color:rgba(255,94,168,.40);
+}
+.diaryCell__day{
+  font-size:14px;
+  font-weight:900;
+}
+.diaryCell__dots{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-height:10px;
+}
+.diaryDot{
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  display:inline-block;
+}
+.diaryDot--memo{ background:#fb7185; }
+.diaryDot--photo{ background:#38bdf8; }
+.diaryDot--anni{ background:#a78bfa; }
+.diaryPhotoList{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:10px;
+}
+.diaryPhoto{
+  position:relative;
+  overflow:hidden;
+  border-radius:16px;
+  border:1px solid rgba(20,25,38,.08);
+  background:rgba(255,255,255,.78);
+}
+.diaryPhoto__img{
+  width:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+  display:block;
+}
+.diaryPhoto__remove{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  border:none;
+  border-radius:999px;
+  padding:6px 10px;
+  background:rgba(17,24,39,.76);
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.diaryAnniversaryList{
+  display:grid;
+  gap:10px;
+}
+.diaryAnniversaryItem{
+  width:100%;
+  border:none;
+  cursor:pointer;
+  text-align:left;
+  border-radius:16px;
+  padding:12px 14px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(20,25,38,.08);
+  box-shadow:var(--shadow2);
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.diaryAnniversaryItem__date{
+  min-width:54px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:900;
+}
+.diaryAnniversaryItem__text{
+  font-size:14px;
+  font-weight:800;
+}
+
 /* ============ Lock Screen ============ */
 .lock{
   position: fixed;
@@ -1030,6 +1189,14 @@ body{
 @media (max-width: 720px){
   .grid--2{ grid-template-columns: 1fr; }
   .hero__media{ min-height:300px; }
+  .diaryPhotoList{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .diaryCalendar,
+  .diaryWeekdays{ gap:6px; }
+  .diaryCell{
+    min-height:64px;
+    padding:8px 6px;
+    border-radius:14px;
+  }
 }
 
 /* ==========================

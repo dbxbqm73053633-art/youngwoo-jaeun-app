@@ -1,8 +1,9 @@
-const CACHE_NAME = "ywjy-shell-v10";
+const CACHE_NAME = "ywjy-shell-v11";
 
 const SHELL = [
   "./",
   "./index.html",
+  "./legacy-app.html",
   "./css/index.css",
   "./js/index.js",
   "./manifest.webmanifest",

@@ -481,12 +481,32 @@ function showLock() {
   }
 }
 function hideLock() {
+  const active = document.activeElement;
+  if (active && $("lock")?.contains(active) && typeof active.blur === "function") {
+    active.blur();
+  }
   $("lock")?.classList.remove("show");
   $("lock")?.setAttribute("aria-hidden", "true");
 }
 function initLock() {
   const unlocked = sessionStorage.getItem(SESSION_KEY) === "1";
-  if (!unlocked) showLock();
+  if (!unlocked) {
+    showLock();
+  } else {
+    (async () => {
+      try {
+        roomId = await makeRoomId(PASSWORD);
+        await ensureAuth();
+        await ensureRoomDoc();
+        await loadRoomConfig();
+        await bootApp();
+      } catch (err) {
+        safeAlert("Firebase 연결/초기화에 실패했어요.", err);
+        sessionStorage.removeItem(SESSION_KEY);
+        showLock();
+      }
+    })();
+  }
 
   $("lockForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -538,6 +558,7 @@ function photosColRef() { return collection(db, "rooms", roomId, "photos"); }
 function memosColRef() { return collection(db, "rooms", roomId, "memos"); }
 function dailyColRef() { return collection(db, "rooms", roomId, "dailyPrompts"); }
 function moodsColRef() { return collection(db, "rooms", roomId, "moods"); }
+function diariesColRef() { return collection(db, "rooms", roomId, "diaries"); }
 
 async function ensureRoomDoc() {
   const ref = roomDocRef();
@@ -1036,6 +1057,347 @@ function initGalleryUI() {
 }
 
 /* ===============================
+   Couple Diary (월별 달력)
+   =============================== */
+let diaryCursor = new Date();
+diaryCursor.setDate(1);
+diaryCursor.setHours(0, 0, 0, 0);
+let diaryMonthEntries = new Map();
+let selectedDiaryKey = "";
+let selectedDiary = null;
+let diaryRemovedPhotos = [];
+
+function toDateKey(d) {
+  if (!(d instanceof Date)) d = new Date(d);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function toMonthKey(d) {
+  if (!(d instanceof Date)) d = new Date(d);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+}
+function dateKeyToDate(dateKey) {
+  const [y, m, d] = String(dateKey).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0);
+}
+function fmtMonthLabel(d) {
+  if (!(d instanceof Date)) d = new Date(d);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+}
+function normalizeDiaryEntry(id, data) {
+  return {
+    id,
+    dateKey: String(data?.dateKey || id),
+    dateTs: typeof data?.dateTs === "number" ? data.dateTs : dateKeyToDate(String(data?.dateKey || id)).getTime(),
+    monthKey: String(data?.monthKey || ""),
+    memo: String(data?.memo || ""),
+    anniversary: String(data?.anniversary || ""),
+    photos: Array.isArray(data?.photos) ? data.photos.filter((it) => String(it?.url || "").trim()) : [],
+    updatedAt: typeof data?.updatedAt === "number" ? data.updatedAt : 0,
+  };
+}
+function getDiaryEntry(dateKey) {
+  return diaryMonthEntries.get(dateKey) || null;
+}
+function hasDiaryContent(entry) {
+  if (!entry) return false;
+  return Boolean(entry.memo?.trim() || entry.anniversary?.trim() || entry.photos?.length);
+}
+async function fetchDiaryMonthEntries() {
+  const snap = await getDocs(query(diariesColRef(), where("monthKey", "==", toMonthKey(diaryCursor))));
+  const next = new Map();
+  snap.forEach((d) => {
+    const row = normalizeDiaryEntry(d.id, d.data());
+    next.set(row.dateKey, row);
+  });
+  diaryMonthEntries = next;
+}
+function renderDiaryCalendar() {
+  const wrap = $("diaryCalendar");
+  if (!wrap) return;
+
+  $("diaryMonthLabel").textContent = fmtMonthLabel(diaryCursor);
+
+  const year = diaryCursor.getFullYear();
+  const month = diaryCursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const firstWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) {
+    cells.push(`<button class="diaryCell diaryCell--empty" type="button" disabled aria-hidden="true"></button>`);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day, 0, 0, 0);
+    const dateKey = toDateKey(date);
+    const entry = getDiaryEntry(dateKey);
+    const dots = [];
+    if (entry?.memo?.trim()) dots.push(`<span class="diaryDot diaryDot--memo"></span>`);
+    if (entry?.photos?.length) dots.push(`<span class="diaryDot diaryDot--photo"></span>`);
+    if (entry?.anniversary?.trim()) dots.push(`<span class="diaryDot diaryDot--anni"></span>`);
+
+    let cls = "diaryCell";
+    if (selectedDiaryKey === dateKey) cls += " diaryCell--active";
+    if (toDateKey(new Date()) === dateKey) cls += " diaryCell--today";
+    if (hasDiaryContent(entry)) cls += " diaryCell--filled";
+
+    cells.push(`
+      <button class="${cls}" type="button" data-date-key="${dateKey}" aria-label="${dateKey} 기록 열기">
+        <span class="diaryCell__day">${day}</span>
+        <span class="diaryCell__dots">${dots.join("")}</span>
+      </button>
+    `);
+  }
+
+  wrap.innerHTML = cells.join("");
+  wrap.querySelectorAll("[data-date-key]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await selectDiaryDate(btn.getAttribute("data-date-key"));
+    });
+  });
+}
+function renderDiaryPhotos() {
+  const wrap = $("diaryPhotoList");
+  if (!wrap) return;
+  const photos = selectedDiary?.photos || [];
+
+  if (!photos.length) {
+    wrap.innerHTML = `<p class="hint">아직 등록된 사진이 없어요.</p>`;
+    return;
+  }
+
+  wrap.innerHTML = photos.map((photo, idx) => `
+    <div class="diaryPhoto">
+      <img class="diaryPhoto__img" src="${escapeHtml(photo.url)}" alt="다이어리 사진 ${idx + 1}" loading="lazy" />
+      <button class="diaryPhoto__remove" type="button" data-remove-photo="${idx}">삭제</button>
+    </div>
+  `).join("");
+
+  wrap.querySelectorAll("[data-remove-photo]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.getAttribute("data-remove-photo"));
+      const target = selectedDiary?.photos?.[idx];
+      if (!target) return;
+      diaryRemovedPhotos.push(target);
+      selectedDiary.photos.splice(idx, 1);
+      renderDiaryPhotos();
+    });
+  });
+}
+function renderDiaryAnniversaryList() {
+  const wrap = $("diaryAnniversaryList");
+  if (!wrap) return;
+  const list = [...diaryMonthEntries.values()]
+    .filter((entry) => entry.anniversary?.trim())
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey, "ko"))
+    .map((entry) => `
+      <button class="diaryAnniversaryItem" type="button" data-anni-date="${escapeHtml(entry.dateKey)}">
+        <span class="diaryAnniversaryItem__date">${escapeHtml(fmtDateShort(dateKeyToDate(entry.dateKey)))}</span>
+        <span class="diaryAnniversaryItem__text">${escapeHtml(entry.anniversary.trim())}</span>
+      </button>
+    `);
+
+  wrap.innerHTML = list.length ? list.join("") : `<p class="hint">이번 달에는 아직 등록된 기념일이 없어요.</p>`;
+  wrap.querySelectorAll("[data-anni-date]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await selectDiaryDate(btn.getAttribute("data-anni-date"));
+    });
+  });
+}
+function renderDiaryEditor() {
+  const date = selectedDiaryKey ? dateKeyToDate(selectedDiaryKey) : new Date();
+  const diaryDate = $("diaryDate");
+  const diaryMemo = $("diaryMemo");
+  const diaryAnniversary = $("diaryAnniversary");
+  const diaryPhotos = $("diaryPhotos");
+  const diarySaveHint = $("diarySaveHint");
+
+  if (diaryDate) diaryDate.value = toISODateInputValue(date);
+  if (diaryMemo) diaryMemo.value = selectedDiary?.memo || "";
+  if (diaryAnniversary) diaryAnniversary.value = selectedDiary?.anniversary || "";
+  if (diaryPhotos) diaryPhotos.value = "";
+  if (diarySaveHint) diarySaveHint.textContent = `${fmtDate(date)} 기록을 편집하고 있어요.`;
+  renderDiaryPhotos();
+}
+async function loadDiaryMonth(selectKey) {
+  await fetchDiaryMonthEntries();
+  if (selectKey) selectedDiaryKey = selectKey;
+  renderDiaryCalendar();
+  renderDiaryAnniversaryList();
+}
+async function selectDiaryDate(dateKey) {
+  if (!dateKey) return;
+  const targetDate = dateKeyToDate(dateKey);
+  const targetMonthKey = toMonthKey(targetDate);
+
+  if (toMonthKey(diaryCursor) !== targetMonthKey) {
+    diaryCursor = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1, 0, 0, 0);
+    await fetchDiaryMonthEntries();
+  }
+
+  selectedDiaryKey = dateKey;
+  const existing = getDiaryEntry(dateKey);
+  selectedDiary = existing
+    ? { ...existing, photos: [...existing.photos] }
+    : {
+        id: dateKey,
+        dateKey,
+        dateTs: targetDate.getTime(),
+        monthKey: targetMonthKey,
+        memo: "",
+        anniversary: "",
+        photos: [],
+        updatedAt: 0,
+      };
+  diaryRemovedPhotos = [];
+  renderDiaryCalendar();
+  renderDiaryAnniversaryList();
+  renderDiaryEditor();
+}
+async function uploadDiaryPhoto(file, dateKey) {
+  const blob = await fileToJpegBlobCompressed(file);
+  const photoId = `${Date.now()}-${simpleHash(`${dateKey}-${file.name}-${Math.random()}`)}`;
+  const path = `rooms/${roomId}/diaries/${dateKey}/${photoId}.jpg`;
+  const fileRef = sRef(storage, path);
+  await uploadBytes(fileRef, blob, { contentType: "image/jpeg" });
+  const url = await getDownloadURL(fileRef);
+  return {
+    url,
+    storagePath: path,
+    name: humanName(file.name),
+    createdAt: Date.now(),
+  };
+}
+async function saveDiaryEntry() {
+  if (!selectedDiaryKey) return;
+  const memo = $("diaryMemo").value.trim();
+  const anniversary = $("diaryAnniversary").value.trim();
+  const files = [...($("diaryPhotos").files || [])].filter((file) => file.type.startsWith("image/"));
+  const nextPhotos = [...(selectedDiary?.photos || [])];
+
+  for (const removed of diaryRemovedPhotos) {
+    if (removed?.storagePath) {
+      try { await deleteObject(sRef(storage, removed.storagePath)); } catch {}
+    }
+  }
+
+  for (const file of files) {
+    const uploaded = await uploadDiaryPhoto(file, selectedDiaryKey);
+    nextPhotos.push(uploaded);
+  }
+
+  const date = dateKeyToDate(selectedDiaryKey);
+  const payload = {
+    dateKey: selectedDiaryKey,
+    dateTs: date.getTime(),
+    monthKey: toMonthKey(date),
+    memo,
+    anniversary,
+    photos: nextPhotos,
+    updatedAt: Date.now(),
+  };
+
+  if (!memo && !anniversary && !nextPhotos.length) {
+    try { await deleteDoc(doc(diariesColRef(), selectedDiaryKey)); } catch {}
+    diaryMonthEntries.delete(selectedDiaryKey);
+    selectedDiary = { ...payload, photos: [] };
+  } else {
+    await setDoc(doc(diariesColRef(), selectedDiaryKey), payload, { merge: true });
+    const normalized = normalizeDiaryEntry(selectedDiaryKey, payload);
+    diaryMonthEntries.set(selectedDiaryKey, normalized);
+    selectedDiary = { ...normalized, photos: [...normalized.photos] };
+  }
+
+  diaryRemovedPhotos = [];
+  renderDiaryCalendar();
+  renderDiaryAnniversaryList();
+  renderDiaryEditor();
+}
+async function deleteDiaryEntry() {
+  if (!selectedDiaryKey) return;
+  const current = selectedDiary || getDiaryEntry(selectedDiaryKey);
+  if (current?.photos?.length) {
+    for (const photo of current.photos) {
+      if (photo?.storagePath) {
+        try { await deleteObject(sRef(storage, photo.storagePath)); } catch {}
+      }
+    }
+  }
+  await deleteDoc(doc(diariesColRef(), selectedDiaryKey));
+  diaryMonthEntries.delete(selectedDiaryKey);
+  selectedDiary = {
+    id: selectedDiaryKey,
+    dateKey: selectedDiaryKey,
+    dateTs: dateKeyToDate(selectedDiaryKey).getTime(),
+    monthKey: toMonthKey(dateKeyToDate(selectedDiaryKey)),
+    memo: "",
+    anniversary: "",
+    photos: [],
+    updatedAt: 0,
+  };
+  diaryRemovedPhotos = [];
+  renderDiaryCalendar();
+  renderDiaryAnniversaryList();
+  renderDiaryEditor();
+}
+function initDiaryUI() {
+  $("diaryPrevMonth")?.addEventListener("click", async () => {
+    diaryCursor = new Date(diaryCursor.getFullYear(), diaryCursor.getMonth() - 1, 1, 0, 0, 0);
+    const today = new Date();
+    const fallbackKey = toMonthKey(today) === toMonthKey(diaryCursor) ? toDateKey(today) : `${toMonthKey(diaryCursor)}-01`;
+    await loadDiaryMonth(fallbackKey);
+    await selectDiaryDate(fallbackKey);
+  });
+
+  $("diaryNextMonth")?.addEventListener("click", async () => {
+    diaryCursor = new Date(diaryCursor.getFullYear(), diaryCursor.getMonth() + 1, 1, 0, 0, 0);
+    const today = new Date();
+    const fallbackKey = toMonthKey(today) === toMonthKey(diaryCursor) ? toDateKey(today) : `${toMonthKey(diaryCursor)}-01`;
+    await loadDiaryMonth(fallbackKey);
+    await selectDiaryDate(fallbackKey);
+  });
+
+  $("diaryDate")?.addEventListener("change", async (e) => {
+    const nextDate = e.target.value;
+    const nextKey = nextDate || toDateKey(new Date());
+    await selectDiaryDate(nextKey);
+  });
+
+  $("diaryForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      $("diarySaveHint").textContent = "저장 중…";
+      await saveDiaryEntry();
+      $("diarySaveHint").textContent = "저장 완료 ♡ 달력 점도 바로 업데이트됐어요.";
+    } catch (err) {
+      $("diarySaveHint").textContent = "저장 실패";
+      safeAlert("다이어리 저장에 실패했어요.", err);
+    }
+  });
+
+  $("diaryDeleteBtn")?.addEventListener("click", async () => {
+    if (!selectedDiaryKey) return;
+    const ok = confirm("이 날짜의 다이어리 기록을 삭제할까요?");
+    if (!ok) return;
+    try {
+      await deleteDiaryEntry();
+      $("diarySaveHint").textContent = "이 날짜 기록을 삭제했어요.";
+    } catch (err) {
+      $("diarySaveHint").textContent = "삭제 실패";
+      safeAlert("다이어리 삭제에 실패했어요.", err);
+    }
+  });
+
+  const today = new Date();
+  diaryCursor = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0);
+  const todayKey = toDateKey(today);
+  loadDiaryMonth(todayKey)
+    .then(() => selectDiaryDate(todayKey))
+    .catch((err) => safeAlert("다이어리 달력을 불러오지 못했어요.", err));
+}
+
+/* ===============================
    Memo
    =============================== */
 async function fetchMemos() {
@@ -1403,7 +1765,7 @@ function initTabs() {
     home: $("tab-home"),
     photos: $("tab-photos"),
     memo: $("tab-memo"),
-    mood: $("tab-mood"),
+    diary: $("tab-diary"),
     admin: $("tab-admin"),
   };
 
@@ -1412,8 +1774,8 @@ function initTabs() {
       const target = btn.getAttribute("data-target");
       if (!tabs[target]) return;
 
-      Object.values(tabs).forEach((el) => el.classList.remove("tab--active"));
-      tabs[target].classList.add("tab--active");
+      Object.values(tabs).forEach((el) => el?.classList.remove("tab--active"));
+      tabs[target]?.classList.add("tab--active");
 
       buttons.forEach((b) => b.classList.remove("tabbar__btn--active"));
       btn.classList.add("tabbar__btn--active");
@@ -1426,6 +1788,12 @@ function initTabs() {
    =============================== */
 function initServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  if (location.hostname === "localhost" || location.hostname.endsWith(".app.github.dev")) {
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+      .catch(() => {});
+    return;
+  }
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
@@ -1452,18 +1820,22 @@ async function bootApp() {
   initDailyPromptUI();
   await loadDailyPrompt();
 
-  initMoodUI();
-  initNotifyUI();
+  initDiaryUI();
   initAdminUI();
 }
 
 /* ===============================
    Global init
    =============================== */
-window.addEventListener("DOMContentLoaded", () => {
+let appInitialized = false;
+
+export function initLegacyApp() {
+  if (appInitialized) return;
+  appInitialized = true;
+
   initBgm();
   initLyricsPanel();   // 👈 가사 패널 초기화 추가
   initInstallUX();
   initLock();
   initServiceWorker();
-});
+}
