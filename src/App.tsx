@@ -8,10 +8,12 @@ type LegacyModule = {
 export default function App() {
   const [markup, setMarkup] = useState("");
   const initRef = useRef(false);
+  const baseUrl = import.meta.env.BASE_URL;
+
   useEffect(() => {
     let active = true;
 
-    fetch("/legacy-app.html")
+    fetch(`${baseUrl}legacy-app.html`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to load legacy markup: ${response.status}`);
@@ -30,7 +32,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [baseUrl]);
 
   useEffect(() => {
     if (!markup || initRef.current) {
