@@ -1,0 +1,61 @@
+import type { LyricTiming } from "../services/musicService";
+
+export const lyrics: LyricTiming[] = [
+  { time: 15.160, text: "[Verse 1]", tag: true },
+  { time: 15.160, text: "아침 햇살보다 네가 먼저 떠올라" },
+  { time: 22.978, text: "잠든 네 손끝이 내 하루를 깨워" },
+  { time: 29.893, text: "작은 네 웃음 하나 내 맘을 다 적셔와" },
+  { time: 35.585, text: "말없이 안아도 다 전해지는 걸" },
+
+  { time: 44.102, text: "[Pre-Chorus]", tag: true },
+  { time: 44.102, text: "세상은 늘 바빠도 나는 멈춰 서서" },
+  { time: 51.701, text: "너 하나만 보게 돼 그게 내 진심이야" },
+  { time: 59.015, text: "조금 서툴러도 내 사랑은 선명해" },
+  { time: 65.146, text: "이름만 불러도 가슴이 벅차올라" },
+
+  { time: 73.607, text: "[Chorus]", tag: true },
+  { time: 73.607, text: "재은아, 내 사랑" },
+  { time: 78.430, text: "너를 꼭 안을게" },
+  { time: 82.819, text: "재은아, 내 세상" },
+  { time: 88.245, text: "너만 있으면 돼" },
+  { time: 92.313, text: "네가 웃는 순간 난 다 괜찮아져" },
+  { time: 102.686, text: "재은아, 내 사랑" },
+  { time: 106.941, text: "영원히 널 지킬게" },
+
+  { time: 110.598, text: "[Verse 2]", tag: true },
+  { time: 110.598, text: "비가 오는 날도 네 목소린 햇살 같아" },
+  { time: 119.680, text: "한참 지친 밤에도 넌 내 길이 돼" },
+  { time: 124.149, text: "투정 부린 내 말도 다 받아준 네 마음" },
+  { time: 135.558, text: "그 다정한 온도에 나도 물들어가" },
+
+  { time: 142.609, text: "[Pre-Chorus]", tag: true },
+  { time: 142.609, text: "아무 말 안 해도 널 알 수 있어 난" },
+  { time: 150.039, text: "눈빛 하나만으로 서로를 안아" },
+  { time: 154.281, text: "흔들리는 세상 속 내 편은 너 하나" },
+  { time: 164.720, text: "이름만 불러도 모든 게 괜찮아" },
+
+  { time: 171.759, text: "[Chorus]", tag: true },
+  { time: 171.759, text: "재은아, 내 사랑" },
+  { time: 176.649, text: "너를 꼭 안을게" },
+  { time: 180.877, text: "재은아, 내 세상" },
+  { time: 183.032, text: "너만 있으면 돼" },
+  { time: 190.611, text: "네가 웃는 순간 난 다 괜찮아져" },
+  { time: 200.824, text: "재은아, 내 사랑" },
+  { time: 205.079, text: "영원히 널 지킬게" },
+
+  { time: 209.724, text: "[Bridge]", tag: true },
+  { time: 209.724, text: "혹시 멀어지는 날이 와도" },
+  { time: 213.669, text: "내 마음은 여기 있어" },
+  { time: 215.903, text: "수많은 계절이 지나도" },
+  { time: 220.532, text: "널 처음처럼 사랑할게" },
+
+  { time: 226.243, text: "[Final Chorus]", tag: true },
+  { time: 226.243, text: "재은아, 내 사랑" },
+  { time: 231.144, text: "너를 꼭 안을게" },
+  { time: 235.451, text: "재은아, 내 세상" },
+  { time: 240.956, text: "너만 있으면 돼" },
+  { time: 243.510, text: "네가 웃는 순간 난 다 괜찮아져" },
+  { time: 255.318, text: "재은아, 내 사랑" },
+  { time: 259.654, text: "영원히 널 지킬게" },
+  { time: 266.936, text: "영원히 널 지킬게" },
+];

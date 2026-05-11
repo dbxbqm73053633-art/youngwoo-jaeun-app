@@ -1,0 +1,49 @@
+
+> youngwoo-jaeun-app@0.0.0 dev
+> vite --host 0.0.0.0
+
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m309[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://121.173.121.96:[1m5173[22m/[39m
+[2mAM 2:37:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:39:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:43:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoGrid.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoList.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/memo/MemoScreen.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarGrid.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
+[2mAM 2:48:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventList.tsx[22m
+[2mAM 2:50:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:50:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoList.tsx[22m
+[2mAM 2:54:34[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33mfirebase/firestore, firebase/app, firebase/auth, firebase/storage[32m[39m
+[2mAM 2:54:34[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2mAM 2:55:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:56:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoGrid.tsx[22m
+[2mAM 2:56:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 2:56:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:56:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 2:57:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 2:59:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 2:59:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarGrid.tsx[22m
+[2mAM 2:59:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 2:59:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventList.tsx[22m
+[2mAM 3:00:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarHeader.tsx[22m
+[2mAM 3:00:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarGrid.tsx[22m
+[2mAM 3:02:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 3:02:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/MusicMiniBar.tsx[22m
+[2mAM 3:02:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/LyricsPanel.tsx[22m
+[2mAM 3:02:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/MusicPlayer.tsx[22m
+[2mAM 3:03:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/LyricsPanel.tsx[22m
+[2mAM 3:03:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/music/MusicScreen.tsx[22m
+[2mAM 3:03:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/MusicPlayer.tsx[22m
+[2mAM 3:03:10[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/music/MusicScreen.tsx[22m
+[2mAM 3:03:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/MusicPlayer.tsx[22m
+[2mAM 3:11:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 3:11:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 3:11:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2mAM 3:11:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m

@@ -48,9 +48,7 @@ const DAILY_PROMPTS = [
 /* ===============================
    Firebase
    =============================== */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
-  getFirestore,
   collection,
   doc,
   addDoc,
@@ -64,43 +62,17 @@ import {
   orderBy,
   limit,
   serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+} from "firebase/firestore";
 
 import {
-  getStorage,
   ref as sRef,
   uploadBytes,
   getDownloadURL,
   deleteObject,
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
+} from "firebase/storage";
 
-// 🔐 Firebase Auth (Anonymous login for Firestore rules)
-import {
-  getAuth,
-  signInAnonymously
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-
-/* ✅ 네 프로젝트 설정 그대로 */
-const firebaseConfig = {
-  apiKey: "AIzaSyDvno110yawAqkbYd5pSOVTquDJY5ILjLc",
-  authDomain: "couple-youngwoo-jisun-20260205.firebaseapp.com",
-  projectId: "couple-youngwoo-jisun-20260205",
-  storageBucket: "couple-youngwoo-jisun-20260205.firebasestorage.app",
-  messagingSenderId: "365911720629",
-  appId: "1:365911720629:web:5c84c8755b6e90bcbaf4fc",
-  measurementId: "G-9REC1WL612"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app);
-const auth = getAuth(app);
-
-async function ensureAuth() {
-  if (!auth.currentUser) {
-    await signInAnonymously(auth);
-  }
-}
+import { db, storage } from "../lib/firebase";
+import { ensureAuth } from "../services/authService";
 
 /* ===============================
    Utils
@@ -221,6 +193,7 @@ function pauseBgm() {
 function initBgm() {
   const audio = $("bgm");
   if (!audio) return;
+  if ($("musicToggle")?.dataset.reactRender === "true") return;
 
   $("musicVol")?.addEventListener("input", () => {
     audio.volume = Number($("musicVol").value);
@@ -382,6 +355,7 @@ function initLyricsPanel() {
   const backdrop = panel ? panel.querySelector(".lyrics__backdrop") : null;
 
   if (!panel || !openBtn || !closeBtn || !backdrop) return;
+  if (panel.dataset.reactRender === "true") return;
 
   renderLyrics();
 
@@ -469,6 +443,36 @@ async function makeRoomId(pass) {
 }
 let roomId = null;
 
+function notifyRoomReady() {
+  window.__YWJY_ROOM_ID__ = roomId;
+  window.dispatchEvent(new CustomEvent("ywjy:room-ready", { detail: { roomId } }));
+}
+
+function notifyMemosChanged() {
+  window.dispatchEvent(new CustomEvent("ywjy:memos-changed", { detail: { roomId } }));
+}
+
+function notifyPhotosChanged() {
+  window.dispatchEvent(new CustomEvent("ywjy:photos-changed", {
+    detail: {
+      roomId,
+      album: currentAlbum,
+      sortMode,
+    },
+  }));
+}
+
+function notifyCalendarChanged() {
+  const detail = {
+    roomId,
+    monthKey: toMonthKey(diaryCursor),
+    selectedDateKey: selectedDiaryKey,
+    entries: [...diaryMonthEntries.values()],
+  };
+  window.dispatchEvent(new CustomEvent("ywjy:calendar-changed", { detail }));
+  window.dispatchEvent(new CustomEvent("ywyj:calendar-changed", { detail }));
+}
+
 /* ===============================
    Lock Screen
    =============================== */
@@ -496,6 +500,7 @@ function initLock() {
     (async () => {
       try {
         roomId = await makeRoomId(PASSWORD);
+        notifyRoomReady();
         await ensureAuth();
         await ensureRoomDoc();
         await loadRoomConfig();
@@ -525,6 +530,7 @@ function initLock() {
 
       try {
         roomId = await makeRoomId(pass);
+        notifyRoomReady();
         await ensureAuth();
         await ensureRoomDoc();
         await loadRoomConfig();
@@ -716,6 +722,7 @@ function getPagedRows() {
 function updatePagingUI() {
   const wrap = $("gallery");
   if (!wrap) return;
+  if (wrap.dataset.reactRender === "true") return;
   const shown = getPagedRows().length;
   $("photoCount").textContent = String(viewRows.length);
   $("pagingHint").textContent = `${shown} / ${viewRows.length}장 표시`;
@@ -830,6 +837,12 @@ function setLightboxByIndex(i) {
 
   $("lbSaveHint").textContent = "수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)";
 }
+function setLightboxByPhotoId(id) {
+  const idx = viewRows.findIndex((it) => it.id === id);
+  if (idx < 0) return;
+  page = Math.max(page, Math.ceil((idx + 1) / PAGE_SIZE));
+  setLightboxByIndex(idx);
+}
 async function saveLightboxEdits() {
   if (!lbPhotoId) return;
 
@@ -860,6 +873,12 @@ function initLightbox() {
 
   $("lbPrev")?.addEventListener("click", () => setLightboxByIndex(lbIndex - 1));
   $("lbNext")?.addEventListener("click", () => setLightboxByIndex(lbIndex + 1));
+
+  window.addEventListener("ywjy:open-photo", (e) => {
+    if (e.detail?.id) setLightboxByPhotoId(e.detail.id);
+    else setLightboxByIndex(Number(e.detail?.index ?? 0));
+    openLightbox();
+  });
 
   $("lbSave")?.addEventListener("click", async () => {
     try {
@@ -892,6 +911,29 @@ async function renderGallery() {
   if (!wrap || !slider) return;
 
   const shown = getPagedRows();
+  const renderSlider = () => {
+    if (!shown.length) {
+      slider.innerHTML = `<p class="hint">사진을 올리면 여기에서 슬라이드처럼 볼 수 있어요.</p>`;
+      return;
+    }
+
+    const sliderRows = [...viewRows].slice(0, 20);
+    slider.innerHTML = sliderRows.map((it) => {
+      const caption = it.caption?.trim() ? it.caption.trim() : (it.album || "사진");
+      return `
+        <div class="photoSlider__item">
+          <img class="photoSlider__img" src="${escapeHtml(it.url)}" alt="${escapeHtml(caption)}" loading="lazy" />
+          <div class="photoSlider__caption">${escapeHtml(caption)}</div>
+        </div>
+      `;
+    }).join("");
+  };
+
+  if (wrap.dataset.reactRender === "true") {
+    renderSlider();
+    notifyPhotosChanged();
+    return;
+  }
 
   if (!shown.length) {
     wrap.innerHTML = `<p class="hint">아직 사진이 없어요. 우리 첫 장을 담아볼까요?</p>`;
@@ -912,16 +954,7 @@ async function renderGallery() {
   }).join("");
 
   // 슬라이더: 최신순 20장만
-  const sliderRows = [...viewRows].slice(0, 20);
-  slider.innerHTML = sliderRows.map((it) => {
-    const caption = it.caption?.trim() ? it.caption.trim() : (it.album || "사진");
-    return `
-      <div class="photoSlider__item">
-        <img class="photoSlider__img" src="${escapeHtml(it.url)}" alt="${escapeHtml(caption)}" loading="lazy" />
-        <div class="photoSlider__caption">${escapeHtml(caption)}</div>
-      </div>
-    `;
-  }).join("");
+  renderSlider();
 
   updatePagingUI();
 
@@ -1043,14 +1076,25 @@ function initGalleryUI() {
     await renderGallery();
   });
 
-  $("loadMore")?.addEventListener("click", async () => {
-    page += 1;
-    await renderGallery();
-  });
+  if ($("gallery")?.dataset.reactRender !== "true") {
+    $("loadMore")?.addEventListener("click", async () => {
+      page += 1;
+      await renderGallery();
+    });
 
-  $("resetPaging")?.addEventListener("click", async () => {
-    resetPaging();
-    await renderGallery();
+    $("resetPaging")?.addEventListener("click", async () => {
+      resetPaging();
+      await renderGallery();
+    });
+  }
+
+  window.addEventListener("ywjy:request-photos-refresh", async () => {
+    try {
+      await rebuildAlbumOptions();
+      await refreshPhotos(false);
+    } catch (err) {
+      safeAlert("앨범 불러오기에 실패했어요.", err);
+    }
   });
 
   initLightbox();
@@ -1116,6 +1160,10 @@ function renderDiaryCalendar() {
   if (!wrap) return;
 
   $("diaryMonthLabel").textContent = fmtMonthLabel(diaryCursor);
+  if (wrap.dataset.reactRender === "true") {
+    notifyCalendarChanged();
+    return;
+  }
 
   const year = diaryCursor.getFullYear();
   const month = diaryCursor.getMonth();
@@ -1188,6 +1236,10 @@ function renderDiaryPhotos() {
 function renderDiaryAnniversaryList() {
   const wrap = $("diaryAnniversaryList");
   if (!wrap) return;
+  if (wrap.dataset.reactRender === "true") {
+    notifyCalendarChanged();
+    return;
+  }
   const list = [...diaryMonthEntries.values()]
     .filter((entry) => entry.anniversary?.trim())
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey, "ko"))
@@ -1342,6 +1394,14 @@ async function deleteDiaryEntry() {
   renderDiaryEditor();
 }
 function initDiaryUI() {
+  window.addEventListener("ywjy:select-diary-date", async (e) => {
+    try {
+      await selectDiaryDate(e.detail?.dateKey);
+    } catch (err) {
+      safeAlert("다이어리 날짜를 불러오지 못했어요.", err);
+    }
+  });
+
   $("diaryPrevMonth")?.addEventListener("click", async () => {
     diaryCursor = new Date(diaryCursor.getFullYear(), diaryCursor.getMonth() - 1, 1, 0, 0, 0);
     const today = new Date();
@@ -1404,6 +1464,11 @@ async function fetchMemos() {
   const snap = await getDocs(query(memosColRef(), orderBy("createdAt", "desc"), limit(100)));
   const list = $("memoList");
   if (!list) return;
+
+  if (list.dataset.reactRender === "true") {
+    notifyMemosChanged();
+    return;
+  }
 
   if (snap.empty) {
     list.innerHTML = `<p class="hint">아직 메모가 없어요. 오늘 있었던 일을 살짝 남겨볼까요?</p>`;
