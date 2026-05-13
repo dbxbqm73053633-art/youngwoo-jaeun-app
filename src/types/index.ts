@@ -1,4 +1,4 @@
-export type RoomConfig = {
+﻿export type RoomConfig = {
   nameA: string;
   nameB: string;
   startDate: number;
@@ -10,10 +10,14 @@ export type PhotoRecord = {
   album: string;
   caption: string;
   date: number | null;
+  memo?: string;
   name: string;
   url: string;
+  thumbnailUrl?: string;
   storagePath: string;
   createdAt: number;
+  order?: number;
+  isCover?: boolean;
 };
 
 export type MemoRecord = {

@@ -1,22 +1,21 @@
-import { useCallback, useMemo, useState } from "react";
-import { deletePhoto, listAlbums, listPhotos, updatePhoto, uploadPhotoFile } from "../services/photoService";
+﻿import { useCallback, useMemo, useState } from "react";
+import { deletePhoto, listAlbums, listPhotos, setPhotoAsCover, updatePhoto, uploadPhotoFile } from "../services/photoService";
 import type { PhotoRecord } from "../types";
 
-export type PhotoSortMode = "new" | "old" | "name_asc" | "date_desc";
+export type PhotoSortMode = "new" | "old" | "custom";
 
 function sortPhotos(rows: PhotoRecord[], sortMode: PhotoSortMode) {
   const sorted = [...rows];
   const compareText = (a: string, b: string) => a.localeCompare(b, "ko", { sensitivity: "base" });
 
-  if (sortMode === "old") sorted.sort((a, b) => a.createdAt - b.createdAt);
-  else if (sortMode === "name_asc") sorted.sort((a, b) => compareText(a.name, b.name) || b.createdAt - a.createdAt);
-  else if (sortMode === "date_desc") sorted.sort((a, b) => (b.date ?? b.createdAt) - (a.date ?? a.createdAt));
+  if (sortMode === "old") sorted.sort((a, b) => (a.date ?? a.createdAt) - (b.date ?? b.createdAt));
+  else if (sortMode === "custom") sorted.sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt) || compareText(a.name, b.name));
   else sorted.sort((a, b) => b.createdAt - a.createdAt);
 
   return sorted;
 }
 
-export function usePhotos(roomId: string | null, pageSize = 12) {
+export function usePhotos(roomId: string | null, pageSize = 18) {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [albums, setAlbums] = useState<string[]>([]);
   const [album, setAlbum] = useState("__ALL__");
@@ -51,6 +50,14 @@ export function usePhotos(roomId: string | null, pageSize = 12) {
     await reload(album);
   }, [album, reload, roomId]);
 
+  const removePhotos = useCallback(async (photoIds: string[]) => {
+    if (!roomId) return;
+    for (const photoId of photoIds) {
+      await deletePhoto(roomId, photoId);
+    }
+    await reload(album);
+  }, [album, reload, roomId]);
+
   const uploadPhotos = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => {
     if (!roomId) return;
     for (const file of files) {
@@ -63,6 +70,18 @@ export function usePhotos(roomId: string | null, pageSize = 12) {
   const updatePhotoMeta = useCallback(async (photoId: string, patch: Partial<PhotoRecord>) => {
     if (!roomId) return;
     await updatePhoto(roomId, photoId, patch);
+    await reload(album);
+  }, [album, reload, roomId]);
+
+  const movePhotosToAlbum = useCallback(async (photoIds: string[], nextAlbum: string) => {
+    if (!roomId) return;
+    await Promise.all(photoIds.map((photoId) => updatePhoto(roomId, photoId, { album: nextAlbum })));
+    await reload(album);
+  }, [album, reload, roomId]);
+
+  const setCoverPhoto = useCallback(async (photoId: string) => {
+    if (!roomId) return;
+    await setPhotoAsCover(roomId, photoId);
     await reload(album);
   }, [album, reload, roomId]);
 
@@ -81,6 +100,9 @@ export function usePhotos(roomId: string | null, pageSize = 12) {
     setPage,
     reload,
     removePhoto,
+    removePhotos,
+    movePhotosToAlbum,
+    setCoverPhoto,
     uploadPhotos,
     updatePhotoMeta,
   };

@@ -27,6 +27,7 @@ export default function CalendarEventForm({ roomId, selectedDateKey, selectedEnt
   const [saving, setSaving] = useState(false);
   const [hint, setHint] = useState("날짜를 눌러 함께한 하루를 저장해보세요.");
   const [error, setError] = useState("");
+  const selectedPhotoText = files.length ? `선택된 사진 ${files.length}장` : "선택된 사진이 없어요";
 
   useEffect(() => {
     setMemo(selectedEntry?.memo || "");
@@ -111,7 +112,11 @@ export default function CalendarEventForm({ roomId, selectedDateKey, selectedEnt
         <label className="label">날짜<input id="diaryDate" className="input" type="date" value={selectedDateKey} onChange={(event) => onSelectDate(event.target.value)} disabled={saving} /></label>
         <label className="label">메모<textarea id="diaryMemo" className="textarea" rows={5} maxLength={1000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="오늘 같이 있었던 일, 기억하고 싶은 장면, 서로에게 하고 싶은 말들" disabled={saving} /></label>
         <label className="label">기념일 등록<input id="diaryAnniversary" className="input" type="text" maxLength={60} value={anniversary} onChange={(event) => setAnniversary(event.target.value)} placeholder="예: 첫 드라이브, 300일 벚꽃 데이트" disabled={saving} /></label>
-        <label className="label">사진 추가<input id="diaryPhotos" className="input" type="file" accept="image/*" multiple onChange={(event) => setFiles([...(event.target.files || [])])} disabled={saving} /></label>
+        <div className="diaryUploadPicker">
+          <label className="diaryUploadPicker__button" htmlFor="diaryPhotos">사진 선택하기</label>
+          <span className="diaryUploadPicker__count">{selectedPhotoText}</span>
+          <input id="diaryPhotos" className="diaryUploadPicker__input" type="file" accept="image/*" multiple onChange={(event) => setFiles([...(event.target.files || [])])} disabled={saving} />
+        </div>
         <div className="diaryPhotoList" id="diaryPhotoList" data-react-render="true">
           {photos.length ? photos.map((photo, index) => (
             <div className="diaryPhoto" key={`${photo.storagePath}-${index}`}>

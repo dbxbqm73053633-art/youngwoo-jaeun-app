@@ -1,10 +1,11 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where, type CollectionReference } from "firebase/firestore";
+﻿import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where, type CollectionReference } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import type { PhotoRecord } from "../types";
 
 const MAX_IMAGE_LONG_SIDE = 1600;
 const JPG_QUALITY = 0.86;
+const DEFAULT_ALBUM = "기본앨범";
 
 export function photosCollection(roomId: string): CollectionReference {
   return collection(db, "rooms", roomId, "photos");
@@ -12,6 +13,10 @@ export function photosCollection(roomId: string): CollectionReference {
 
 export function photoDocument(roomId: string, photoId: string) {
   return doc(db, "rooms", roomId, "photos", photoId);
+}
+
+function normalizeAlbum(value: unknown) {
+  return String(value || DEFAULT_ALBUM).trim() || DEFAULT_ALBUM;
 }
 
 export async function listPhotos(roomId: string, album = "__ALL__", maxRows = 1500): Promise<PhotoRecord[]> {
@@ -26,14 +31,18 @@ export async function listPhotos(roomId: string, album = "__ALL__", maxRows = 15
       const data = item.data();
       return {
         id: item.id,
-        album: String(data.album || "기본앨범").trim() || "기본앨범",
+        album: normalizeAlbum(data.album),
         caption: String(data.caption || ""),
         date: typeof data.date === "number" ? data.date : null,
+        memo: String(data.memo || ""),
         name: String(data.name || "photo"),
         url: String(data.url || ""),
+        thumbnailUrl: String(data.thumbnailUrl || ""),
         storagePath: String(data.storagePath || ""),
         createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
-      };
+        order: typeof data.order === "number" ? data.order : undefined,
+        isCover: Boolean(data.isCover),
+      } satisfies PhotoRecord;
     })
     .filter((item) => item.url.trim().length > 0);
 }
@@ -46,7 +55,7 @@ export async function listAlbums(roomId: string, maxRows = 1500): Promise<string
     const data = item.data();
     const hasUrl = typeof data.url === "string" && data.url.trim().length > 0;
     if (!hasUrl) return;
-    albums.add(String(data.album || "기본앨범").trim() || "기본앨범");
+    albums.add(normalizeAlbum(data.album));
   });
 
   return [...albums].sort((a, b) => a.localeCompare(b, "ko"));
@@ -60,6 +69,12 @@ export async function updatePhoto(roomId: string, photoId: string, patch: Partia
   await updateDoc(photoDocument(roomId, photoId), patch);
 }
 
+export async function setPhotoAsCover(roomId: string, photoId: string) {
+  const snap = await getDocs(query(photosCollection(roomId), where("isCover", "==", true), limit(50)));
+  await Promise.all(snap.docs.map((item) => updateDoc(item.ref, { isCover: false })));
+  await updateDoc(photoDocument(roomId, photoId), { isCover: true });
+}
+
 export async function deletePhoto(roomId: string, photoId: string) {
   const ref = photoDocument(roomId, photoId);
   const snap = await getDoc(ref);
@@ -70,7 +85,7 @@ export async function deletePhoto(roomId: string, photoId: string) {
     try {
       await deleteObject(storageRef(storage, path));
     } catch {
-      // Legacy behavior ignores missing Storage objects and still deletes Firestore metadata.
+      // Existing customer records can point at missing Storage files; Firestore cleanup should still finish.
     }
   }
 
@@ -86,7 +101,7 @@ export async function uploadPhotoBlob(path: string, blob: Blob) {
 function humanName(filename: string) {
   if (!filename) return "photo";
   const base = filename.replace(/\.[^/.]+$/, "");
-  return base.length > 18 ? `${base.slice(0, 18)}…` : base;
+  return base.length > 18 ? `${base.slice(0, 18)}...` : base;
 }
 
 export function fromISODateInputValue(value: string) {
@@ -101,6 +116,11 @@ export function toISODateInputValue(tsOrDate: number | Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function formatPhotoDate(ts: number | null | undefined) {
+  if (!ts) return "날짜 없음";
+  return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(ts));
 }
 
 export async function fileToJpegBlobCompressed(file: File): Promise<Blob> {
@@ -134,9 +154,13 @@ export async function uploadPhotoFile(
     album: metadata.album,
     caption: metadata.caption,
     date: metadata.date,
+    memo: "",
     name: humanName(file.name),
     createdAt: now,
+    order: now,
+    isCover: false,
     url: "",
+    thumbnailUrl: "",
     storagePath: "",
   });
   const path = `rooms/${roomId}/photos/${docRef.id}.jpg`;
@@ -144,12 +168,12 @@ export async function uploadPhotoFile(
   try {
     const blob = await fileToJpegBlobCompressed(file);
     const url = await uploadPhotoBlob(path, blob);
-    await updateDoc(docRef, { url, storagePath: path });
+    await updateDoc(docRef, { url, thumbnailUrl: url, storagePath: path });
   } catch (error) {
     try {
       await deleteDoc(docRef);
     } catch {
-      // Preserve the original upload behavior: cleanup is best-effort.
+      // Preserve upload behavior: cleanup is best-effort.
     }
     throw error;
   }
