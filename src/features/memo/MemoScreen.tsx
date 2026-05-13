@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import MemoForm from "../../components/memo/MemoForm";
 import MemoList from "../../components/memo/MemoList";
 import TodayPromptCard from "../../components/memo/TodayPromptCard";
@@ -13,13 +13,13 @@ export default function MemoScreen({ onReady }: MemoScreenProps) {
   }, [onReady]);
 
   return (
-    <section className="tab" id="tab-memo" aria-label="메모와 오늘의 한마디">
+    <section className="tab tab--active" id="tab-memo" aria-label="메모와 오늘의 한마디">
       <TodayPromptCard />
 
       <section className="section">
         <div className="section__head">
           <h2 className="section__title">다정한 메모</h2>
-          <p className="section__desc">우리들만의 이야기를 저장하여 함께 공유돼요.</p>
+          <p className="section__desc">우리만의 이야기를 저장하고 함께 공유해요.</p>
         </div>
 
         <div className="grid grid--2">
@@ -27,8 +27,6 @@ export default function MemoScreen({ onReady }: MemoScreenProps) {
           <MemoList />
         </div>
       </section>
-
-      {/* TODO: memo add/delete and today prompt persistence remain legacy-owned for now. */}
     </section>
   );
 }

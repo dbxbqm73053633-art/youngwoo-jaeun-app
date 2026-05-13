@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
+import { useRoom } from "../../contexts/RoomContext";
 import { useMemos } from "../../hooks/useMemos";
+import { useConfirm } from "../layout/ModalProvider";
 import MemoCard from "./MemoCard";
-
-type LegacyWindow = Window & {
-  __YWJY_ROOM_ID__?: string;
-};
 
 function formatMemoDate(timestamp: number) {
   if (!timestamp) return "";
@@ -16,43 +14,39 @@ function formatMemoDate(timestamp: number) {
 }
 
 export default function MemoList() {
-  const [roomId, setRoomId] = useState(() => (window as LegacyWindow).__YWJY_ROOM_ID__ ?? null);
-  const { memos, reload, removeMemo } = useMemos(roomId);
-
-  useEffect(() => {
-    const syncRoom = (event: Event) => {
-      const detail = (event as CustomEvent<{ roomId?: string }>).detail;
-      setRoomId(detail?.roomId ?? (window as LegacyWindow).__YWJY_ROOM_ID__ ?? null);
-    };
-
-    window.addEventListener("ywjy:room-ready", syncRoom);
-    return () => window.removeEventListener("ywjy:room-ready", syncRoom);
-  }, []);
+  const { roomId } = useRoom();
+  const { error, loading, memos, reload, removeMemo } = useMemos(roomId);
+  const requestConfirm = useConfirm();
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     void reload();
   }, [reload, roomId]);
 
-  useEffect(() => {
-    const handleMemosChanged = () => {
-      void reload();
-    };
-
-    window.addEventListener("ywjy:memos-changed", handleMemosChanged);
-    return () => window.removeEventListener("ywjy:memos-changed", handleMemosChanged);
-  }, [reload]);
-
   const handleDelete = useCallback(async (id: string) => {
-    const ok = confirm("이 메모를 삭제할까요?");
+    setDeleteError("");
+    const ok = await requestConfirm({
+      title: "메모 삭제",
+      message: "이 메모를 삭제할까요?",
+      confirmLabel: "삭제",
+      destructive: true,
+    });
     if (!ok) return;
-    await removeMemo(id);
-  }, [removeMemo]);
+    try {
+      await removeMemo(id);
+    } catch {
+      setDeleteError("메모 삭제에 실패했어요. 잠시 후 다시 시도해주세요.");
+    }
+  }, [requestConfirm, removeMemo]);
 
   return (
     <article className="card">
       <div className="card__title">저장된 메모</div>
       <div className="memoList" id="memoList" data-react-render="true">
-        {memos.length ? (
+        {loading ? <p className="hint">메모를 불러오는 중...</p> : null}
+        {error ? <p className="hint errorText">메모를 불러오지 못했어요. Firebase 연결을 확인해주세요.</p> : null}
+        {deleteError ? <p className="hint errorText">{deleteError}</p> : null}
+        {!loading && !error && memos.length ? (
           memos.map((memo) => (
             <MemoCard
               key={memo.id}
@@ -63,11 +57,11 @@ export default function MemoList() {
               onDelete={handleDelete}
             />
           ))
-        ) : (
+        ) : null}
+        {!loading && !error && !memos.length ? (
           <p className="hint">아직 메모가 없어요. 오늘 있었던 일을 살짝 남겨볼까요?</p>
-        )}
+        ) : null}
       </div>
-      {/* TODO: memo create/clear handlers are still legacy-owned; this list reloads from service events. */}
     </article>
   );
 }

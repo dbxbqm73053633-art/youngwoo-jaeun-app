@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import AdminUnlock from "../../components/settings/AdminUnlock";
 import AnniversarySettings from "../../components/settings/AnniversarySettings";
 import BackupSettings from "../../components/settings/BackupSettings";
@@ -15,7 +15,7 @@ export default function SettingsScreen({ onReady }: SettingsScreenProps) {
   }, [onReady]);
 
   return (
-    <section className="tab" id="tab-admin" aria-label="관리자 모드">
+    <section className="tab tab--active" id="tab-admin" aria-label="관리자 모드">
       <section className="section">
         <div className="section__head">
           <h2 className="section__title">관리자 모드</h2>
@@ -28,8 +28,6 @@ export default function SettingsScreen({ onReady }: SettingsScreenProps) {
         <ThemeSettings />
         <BackupSettings />
       </section>
-
-      {/* TODO: admin form persistence, theme application, and global unlock remain legacy-owned for now. */}
     </section>
   );
 }

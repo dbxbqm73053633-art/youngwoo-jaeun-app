@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { PhotoRecord } from "../../types";
 import PhotoCard from "./PhotoCard";
 
@@ -10,7 +11,7 @@ type PhotoGridProps = {
   onOpenPhoto: (index: number) => void;
 };
 
-export default function PhotoGrid({
+function PhotoGrid({
   hasMore,
   photos,
   totalCount,
@@ -42,7 +43,7 @@ export default function PhotoGrid({
             );
           })
         ) : (
-          <p className="hint">아직 사진이 없어요. 우리 첫 장을 담아볼까요?</p>
+          <p className="hint emptyState">아직 사진이 없어요. 우리 첫 장면을 담아볼까요?</p>
         )}
       </div>
 
@@ -56,9 +57,12 @@ export default function PhotoGrid({
         >
           더 보기
         </button>
-        <div className="paging__hint" id="pagingHint">{photos.length} / {totalCount}장 표시</div>
+        <div className="paging__hint" id="pagingHint">
+          {photos.length} / {totalCount}장 표시
+        </div>
       </div>
-      {/* TODO: upload/filter/sort and slider refresh are still legacy-owned; React owns the grid rendering. */}
     </>
   );
 }
+
+export default memo(PhotoGrid);

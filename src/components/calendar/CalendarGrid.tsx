@@ -1,12 +1,14 @@
-import CalendarHeader from "./CalendarHeader";
-import CalendarDay from "./CalendarDay";
 import type { DiaryEntry } from "../../types";
+import CalendarDay from "./CalendarDay";
+import CalendarHeader from "./CalendarHeader";
 
 type CalendarGridProps = {
   cursor: Date;
   entries: DiaryEntry[];
   selectedDateKey: string;
   onSelectDate: (dateKey: string) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
 };
 
 function toDateKey(date: Date) {
@@ -15,7 +17,7 @@ function toDateKey(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-export default function CalendarGrid({ cursor, entries, selectedDateKey, onSelectDate }: CalendarGridProps) {
+export default function CalendarGrid({ cursor, entries, selectedDateKey, onSelectDate, onPrevMonth, onNextMonth }: CalendarGridProps) {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const firstWeekday = new Date(year, month, 1).getDay();
@@ -25,7 +27,7 @@ export default function CalendarGrid({ cursor, entries, selectedDateKey, onSelec
 
   return (
     <article className="card card--diaryCalendar">
-      <CalendarHeader cursor={cursor} />
+      <CalendarHeader cursor={cursor} onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} />
 
       <div className="diaryCalendar" id="diaryCalendar" data-react-render="true">
         {Array.from({ length: firstWeekday }).map((_, index) => (
@@ -48,8 +50,7 @@ export default function CalendarGrid({ cursor, entries, selectedDateKey, onSelec
         })}
       </div>
 
-      <p className="hint">점이 찍힌 날짜에는 기록이 있어요. 날짜를 누르면 아래에서 편집할 수 있어요.</p>
-      {/* TODO: diary form population and photo removal are still legacy-owned. */}
+      <p className="hint">점이 채워진 날짜에는 기록이 있어요. 날짜를 누르면 아래에서 편집할 수 있어요.</p>
     </article>
   );
 }

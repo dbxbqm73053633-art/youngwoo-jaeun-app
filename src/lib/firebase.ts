@@ -5,14 +5,29 @@ import { getStorage } from "firebase/storage";
 
 const env = import.meta.env;
 
+const requiredFirebaseEnv = {
+  VITE_FIREBASE_API_KEY: env.VITE_FIREBASE_API_KEY,
+  VITE_FIREBASE_AUTH_DOMAIN: env.VITE_FIREBASE_AUTH_DOMAIN,
+  VITE_FIREBASE_PROJECT_ID: env.VITE_FIREBASE_PROJECT_ID,
+  VITE_FIREBASE_STORAGE_BUCKET: env.VITE_FIREBASE_STORAGE_BUCKET,
+  VITE_FIREBASE_MESSAGING_SENDER_ID: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  VITE_FIREBASE_APP_ID: env.VITE_FIREBASE_APP_ID,
+};
+
+export const missingFirebaseEnv = Object.entries(requiredFirebaseEnv)
+  .filter(([, value]) => !String(value || "").trim())
+  .map(([key]) => key);
+
+export const hasFirebaseConfig = missingFirebaseEnv.length === 0;
+
 export const firebaseConfig: FirebaseOptions = {
-  apiKey: env.VITE_FIREBASE_API_KEY || "AIzaSyDvno110yawAqkbYd5pSOVTquDJY5ILjLc",
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "couple-youngwoo-jisun-20260205.firebaseapp.com",
-  projectId: env.VITE_FIREBASE_PROJECT_ID || "couple-youngwoo-jisun-20260205",
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "couple-youngwoo-jisun-20260205.firebasestorage.app",
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "365911720629",
-  appId: env.VITE_FIREBASE_APP_ID || "1:365911720629:web:5c84c8755b6e90bcbaf4fc",
-  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || "G-9REC1WL612",
+  apiKey: env.VITE_FIREBASE_API_KEY || "",
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: env.VITE_FIREBASE_APP_ID || "",
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);

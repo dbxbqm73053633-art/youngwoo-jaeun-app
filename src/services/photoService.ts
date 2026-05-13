@@ -3,6 +3,9 @@ import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "fi
 import { db, storage } from "../lib/firebase";
 import type { PhotoRecord } from "../types";
 
+const MAX_IMAGE_LONG_SIDE = 1600;
+const JPG_QUALITY = 0.86;
+
 export function photosCollection(roomId: string): CollectionReference {
   return collection(db, "rooms", roomId, "photos");
 }
@@ -78,4 +81,76 @@ export async function uploadPhotoBlob(path: string, blob: Blob) {
   const ref = storageRef(storage, path);
   await uploadBytes(ref, blob, { contentType: "image/jpeg" });
   return getDownloadURL(ref);
+}
+
+function humanName(filename: string) {
+  if (!filename) return "photo";
+  const base = filename.replace(/\.[^/.]+$/, "");
+  return base.length > 18 ? `${base.slice(0, 18)}…` : base;
+}
+
+export function fromISODateInputValue(value: string) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 0, 0, 0).getTime();
+}
+
+export function toISODateInputValue(tsOrDate: number | Date) {
+  const date = tsOrDate instanceof Date ? tsOrDate : new Date(tsOrDate);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export async function fileToJpegBlobCompressed(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_IMAGE_LONG_SIDE / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas context unavailable");
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Image compression failed"));
+    }, "image/jpeg", JPG_QUALITY);
+  });
+}
+
+export async function uploadPhotoFile(
+  roomId: string,
+  file: File,
+  metadata: Pick<PhotoRecord, "album" | "caption" | "date">,
+) {
+  const now = Date.now();
+  const docRef = await createPhotoPlaceholder(roomId, {
+    album: metadata.album,
+    caption: metadata.caption,
+    date: metadata.date,
+    name: humanName(file.name),
+    createdAt: now,
+    url: "",
+    storagePath: "",
+  });
+  const path = `rooms/${roomId}/photos/${docRef.id}.jpg`;
+
+  try {
+    const blob = await fileToJpegBlobCompressed(file);
+    const url = await uploadPhotoBlob(path, blob);
+    await updateDoc(docRef, { url, storagePath: path });
+  } catch (error) {
+    try {
+      await deleteDoc(docRef);
+    } catch {
+      // Preserve the original upload behavior: cleanup is best-effort.
+    }
+    throw error;
+  }
 }

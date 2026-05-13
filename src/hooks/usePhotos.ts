@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { deletePhoto, listAlbums, listPhotos } from "../services/photoService";
+import { deletePhoto, listAlbums, listPhotos, updatePhoto, uploadPhotoFile } from "../services/photoService";
 import type { PhotoRecord } from "../types";
 
 export type PhotoSortMode = "new" | "old" | "name_asc" | "date_desc";
@@ -51,6 +51,21 @@ export function usePhotos(roomId: string | null, pageSize = 12) {
     await reload(album);
   }, [album, reload, roomId]);
 
+  const uploadPhotos = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => {
+    if (!roomId) return;
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) continue;
+      await uploadPhotoFile(roomId, file, metadata);
+    }
+    await reload(metadata.album || album);
+  }, [album, reload, roomId]);
+
+  const updatePhotoMeta = useCallback(async (photoId: string, patch: Partial<PhotoRecord>) => {
+    if (!roomId) return;
+    await updatePhoto(roomId, photoId, patch);
+    await reload(album);
+  }, [album, reload, roomId]);
+
   return {
     photos,
     visiblePhotos,
@@ -66,5 +81,7 @@ export function usePhotos(roomId: string | null, pageSize = 12) {
     setPage,
     reload,
     removePhoto,
+    uploadPhotos,
+    updatePhotoMeta,
   };
 }

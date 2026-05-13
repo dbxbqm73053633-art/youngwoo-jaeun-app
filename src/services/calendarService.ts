@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, query, setDoc, where, type CollectionReference } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, type CollectionReference } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import type { DiaryEntry, DiaryPhoto } from "../types";
@@ -42,7 +42,12 @@ export async function saveDiary(roomId: string, dateKey: string, entry: DiaryEnt
 }
 
 export async function deleteDiary(roomId: string, dateKey: string) {
-  await deleteDoc(diaryDocument(roomId, dateKey));
+  const ref = diaryDocument(roomId, dateKey);
+  const snap = await getDoc(ref);
+  const data = snap.exists() ? snap.data() : {};
+  const photos = Array.isArray(data.photos) ? data.photos : [];
+  await Promise.all(photos.map((photo) => deleteDiaryPhoto({ storagePath: String(photo?.storagePath || "") })));
+  await deleteDoc(ref);
 }
 
 export async function uploadDiaryPhoto(roomId: string, dateKey: string, photoId: string, blob: Blob): Promise<DiaryPhoto> {

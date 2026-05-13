@@ -29,23 +29,6 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
   }, [onReady]);
 
   useEffect(() => {
-    document.body.style.overflow = isLyricsOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isLyricsOpen]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isLyricsOpen) return;
-      if (event.key === "Escape") setIsLyricsOpen(false);
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isLyricsOpen]);
-
-  useEffect(() => {
     const unlockOnce = () => {
       if (!audioRef.current?.paused) return;
       void play().catch(() => setIsPlaying(false));
@@ -79,7 +62,6 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
         onPlay={() => setIsPlaying(true)}
         onSync={syncLyrics}
       />
-      {/* TODO: advanced media edge cases still keep legacy fallback when React-owned data attributes are absent. */}
     </>
   );
 }

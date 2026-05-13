@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 type PhotoCardProps = {
   id: string;
   index: number;
@@ -7,14 +9,14 @@ type PhotoCardProps = {
   onOpen?: (index: number) => void;
 };
 
-export default function PhotoCard({ id, index, url, caption, onDelete, onOpen }: PhotoCardProps) {
+function PhotoCard({ id, index, url, caption, onDelete, onOpen }: PhotoCardProps) {
   return (
     <div className="photo" data-id={id} data-idx={index} onClick={() => onOpen?.(index)}>
-      <img className="photo__img" src={url} alt={caption} loading="lazy" />
+      <img className="photo__img" src={url} alt={caption} loading="lazy" decoding="async" />
       <button
         className="photo__del"
         type="button"
-        title="삭제"
+        title="사진 삭제"
         aria-label="사진 삭제"
         data-del={id}
         onClick={(event) => {
@@ -22,8 +24,10 @@ export default function PhotoCard({ id, index, url, caption, onDelete, onOpen }:
           onDelete?.(id);
         }}
       >
-        ✕
+        ×
       </button>
     </div>
   );
 }
+
+export default memo(PhotoCard);
