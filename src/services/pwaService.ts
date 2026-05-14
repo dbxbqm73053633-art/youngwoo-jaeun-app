@@ -5,6 +5,11 @@ export type BeforeInstallPromptEvent = Event & {
 
 export function setupPwaInstall(onPrompt: (event: BeforeInstallPromptEvent | null) => void) {
   const handleBeforeInstall = (event: Event) => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      onPrompt(null);
+      return;
+    }
     event.preventDefault();
     onPrompt(event as BeforeInstallPromptEvent);
   };

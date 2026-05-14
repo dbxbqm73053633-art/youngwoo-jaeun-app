@@ -1,4 +1,4 @@
-const CACHE_NAME = "ywjy-shell-v12";
+const CACHE_NAME = "ywjy-shell-v13";
 
 const SHELL = [
   "./",
@@ -7,9 +7,6 @@ const SHELL = [
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./images/영우재은.png",
-  "./images/영재.mp4",
-  "./music/재은아사랑해.mp3",
 ];
 
 self.addEventListener("install", (event) => {
