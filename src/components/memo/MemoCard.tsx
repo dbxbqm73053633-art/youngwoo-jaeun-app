@@ -16,11 +16,11 @@ function MemoCard({ id, title, body, date, onDelete }: MemoCardProps) {
         <div className="memo__date">{date}</div>
       </div>
       <div className="memo__body">{body}</div>
-      <div className="memo__actions">
+      {onDelete ? <div className="memo__actions">
         <button className="btn btn--ghost" type="button" data-del={id} onClick={() => onDelete?.(id)}>
           삭제
         </button>
-      </div>
+      </div> : null}
     </div>
   );
 }

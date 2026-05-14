@@ -18,3 +18,95 @@
 [2mAM 6:40:50[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
 [2mAM 6:40:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
 [2mAM 6:42:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
+[2mAM 6:55:43[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/music/MusicScreen.tsx[22m
+[2mAM 7:08:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/home/HeroSection.tsx[22m
+[2mAM 7:13:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:13:39[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 7:13:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/album/AlbumScreen.tsx, /src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx, /src/components/memo/TodayPromptCard.tsx, /src/features/calendar/CalendarScreen.tsx, /src/components/settings/CoupleSettingsForm.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 7:14:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:14:07[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 7:14:07[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/album/AlbumScreen.tsx, /src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx, /src/components/memo/TodayPromptCard.tsx, /src/features/calendar/CalendarScreen.tsx, /src/components/settings/CoupleSettingsForm.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 7:14:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:14:37[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 7:14:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/album/AlbumScreen.tsx, /src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx, /src/components/memo/TodayPromptCard.tsx, /src/features/calendar/CalendarScreen.tsx, /src/components/settings/CoupleSettingsForm.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 7:14:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:14:40[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 7:14:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/album/AlbumScreen.tsx, /src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx, /src/components/memo/TodayPromptCard.tsx, /src/features/calendar/CalendarScreen.tsx, /src/components/settings/CoupleSettingsForm.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 7:40:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:40:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:41:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/LockScreen.tsx[22m
+[2mAM 7:41:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:41:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:41:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:47:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:47:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:47:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 7:47:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/AlbumToolbar.tsx[22m
+[2mAM 7:47:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoGrid.tsx[22m
+[2mAM 7:47:53[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoCard.tsx[22m
+[2mAM 7:48:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoModal.tsx[22m
+[2mAM 7:48:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoForm.tsx[22m
+[2mAM 7:48:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoList.tsx[22m
+[2mAM 7:48:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoCard.tsx[22m
+[2mAM 7:48:26[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 7:48:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
+[2mAM 7:49:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 7:49:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 7:49:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx[22m
+[2mAM 7:49:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoForm.tsx[22m
+[2mAM 7:49:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoList.tsx[22m
+[2mAM 7:49:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 7:49:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 7:49:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/settings/ThemeSettings.tsx[22m
+[2mAM 7:49:45[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/settings/ThemeSettings.tsx[22m
+[2mAM 7:50:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 7:50:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 7:50:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoForm.tsx, /src/components/memo/MemoList.tsx[22m
+[2mAM 7:51:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoForm.tsx[22m
+[2mAM 7:51:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/memo/MemoList.tsx[22m
+[2mAM 7:51:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 7:51:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/calendar/CalendarScreen.tsx[22m
+[2mAM 7:51:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:51:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 7:51:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 8:00:59[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 8:01:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/settings/SettingsScreen.tsx[22m
+[2mAM 8:05:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/settings/BackupSettings.tsx[22m
+[2mAM 8:06:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/settings/SettingsScreen.tsx[22m
+[2mAM 8:06:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/AppLayout.tsx[22m
+[2mAM 8:10:58[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/AppLayout.tsx[22m
+[2mAM 8:11:06[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/music/MusicScreen.tsx[22m
+[2mAM 8:12:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoCard.tsx[22m
+[2mAM 8:12:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoGrid.tsx[22m
+[2mAM 8:13:11[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 8:13:15[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 8:13:22[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/features/album/AlbumScreen.tsx[22m
+[2mAM 8:13:24[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/music/MusicPlayer.tsx[22m
+[2mAM 8:13:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/calendar/CalendarEventForm.tsx[22m
+[2mAM 8:13:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/album/PhotoModal.tsx[22m
+[2mAM 8:21:16[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2mAM 8:21:16[22m [36m[1m[vite][22m[39m server restarted.
+[2mAM 8:28:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 8:28:56[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 8:28:56[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx, /src/features/album/AlbumScreen.tsx, /src/components/memo/MemoForm.tsx, /src/components/memo/TodayPromptCard.tsx, /src/components/memo/MemoList.tsx, /src/features/calendar/CalendarScreen.tsx, /src/components/settings/CoupleSettingsForm.tsx, /src/components/settings/BackupSettings.tsx, /src/components/settings/CustomerProvisioning.tsx, /src/components/settings/ThemeSettings.tsx[22m
+[2mAM 8:29:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/settings/CustomerProvisioning.tsx[22m
+[2mAM 11:09:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:19:39[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2mAM 11:19:39[22m [36m[1m[vite][22m[39m server restarted.
+[2mAM 11:24:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:24:46[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 11:24:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 11:24:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:24:51[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 11:24:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 11:44:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:44:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:44:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:44:28[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 11:44:28[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 11:53:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:53:03[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 11:53:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx[22m
+[2mAM 11:53:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/RoomContext.tsx[22m
+[2mAM 11:53:12[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/RoomContext.tsx[22m Could not Fast Refresh ("useRoom" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2mAM 11:53:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/layout/AppLayout.tsx, /src/components/layout/CinematicIntro.tsx, /src/components/layout/LockScreen.tsx, /src/features/home/HomeScreen.tsx, /src/features/music/MusicScreen.tsx[22m

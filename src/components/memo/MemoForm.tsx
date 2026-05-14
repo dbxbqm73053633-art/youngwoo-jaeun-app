@@ -5,8 +5,8 @@ import { useConfirm } from "../layout/ModalProvider";
 import MemoToolbar from "./MemoToolbar";
 
 export default function MemoForm() {
-  const { roomId, unlocked } = useRoom();
-  const { createMemo, removeAllMemos } = useMemos(roomId);
+  const { admin, role, roomId, unlocked } = useRoom();
+  const { createMemo, removeAllMemos } = useMemos(roomId, role);
   const requestConfirm = useConfirm();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -16,7 +16,7 @@ export default function MemoForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    if (!unlocked || !roomId) {
+    if (!unlocked || !roomId || !admin) {
       setError("입장 후 메모를 저장할 수 있어요.");
       return;
     }
@@ -38,7 +38,7 @@ export default function MemoForm() {
 
   const handleClear = async () => {
     setError("");
-    if (!unlocked || !roomId) {
+    if (!unlocked || !roomId || !admin) {
       setError("입장 후 메모를 삭제할 수 있어요.");
       return;
     }
@@ -60,13 +60,13 @@ export default function MemoForm() {
       <form id="memoForm" className="form" onSubmit={handleSubmit}>
         <label className="label">
           제목
-          <input id="memoTitle" className="input" type="text" maxLength={40} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="예: 오늘도 너라서 좋았어" disabled={saving} />
+          <input id="memoTitle" className="input" type="text" maxLength={40} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="예: 오늘도 너라서 좋았어" disabled={!admin || saving} />
         </label>
         <label className="label">
           내용
-          <textarea id="memoBody" className="textarea" maxLength={500} value={body} onChange={(event) => setBody(event.target.value)} placeholder="우리만 아는 말, 약속, 다짐, 추억들" disabled={saving} />
+          <textarea id="memoBody" className="textarea" maxLength={500} value={body} onChange={(event) => setBody(event.target.value)} placeholder="우리만 아는 말, 약속, 다짐, 추억들" disabled={!admin || saving} />
         </label>
-        <MemoToolbar onClear={handleClear} saving={saving} />
+        <MemoToolbar onClear={handleClear} saving={!admin || saving} />
         {error ? <p className="hint errorText">{error}</p> : <p className="hint">둘만의 비밀 이야기 ♡</p>}
       </form>
     </article>

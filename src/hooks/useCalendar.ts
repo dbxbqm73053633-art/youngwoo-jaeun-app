@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { deleteDiary, listDiaryMonth, saveDiary } from "../services/calendarService";
+import { assertAdminRole } from "../services/permissionService";
+import type { RoomRole } from "../services/roomService";
 import type { DiaryEntry } from "../types";
 
 function toMonthKey(date: Date) {
@@ -12,7 +14,7 @@ function toDateKey(date: Date) {
   return `${toMonthKey(date)}-${day}`;
 }
 
-export function useCalendar(roomId: string | null, initialDate = new Date()) {
+export function useCalendar(roomId: string | null, initialDate = new Date(), role: RoomRole | null = "admin") {
   const [cursor, setCursor] = useState(() => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(initialDate));
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
@@ -40,16 +42,18 @@ export function useCalendar(roomId: string | null, initialDate = new Date()) {
 
   const saveEntry = useCallback(async (entry: DiaryEntry) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await saveDiary(roomId, entry.dateKey, entry);
     setSelectedDateKey(entry.dateKey);
     await reload();
-  }, [reload, roomId]);
+  }, [reload, role, roomId]);
 
   const removeEntry = useCallback(async (dateKey = selectedDateKey) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await deleteDiary(roomId, dateKey);
     await reload();
-  }, [reload, roomId, selectedDateKey]);
+  }, [reload, role, roomId, selectedDateKey]);
 
   return {
     cursor,

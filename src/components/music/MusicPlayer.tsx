@@ -11,7 +11,7 @@ export default function MusicPlayer({ audioRef, onPause, onPlay, onSync }: Music
   return (
     <audio
       id="bgm"
-      preload="auto"
+      preload="metadata"
       loop
       ref={audioRef}
       data-react-render="true"

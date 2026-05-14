@@ -1,9 +1,11 @@
 import { Suspense, type ReactNode } from "react";
+import CinematicIntro from "./CinematicIntro";
 import HeaderBar from "./HeaderBar";
 import InstallBanner from "./InstallBanner";
 import LoadingOverlay from "./LoadingOverlay";
 import LockScreen from "./LockScreen";
 import MobileTabBar from "./MobileTabBar";
+import OnboardingGuide from "./OnboardingGuide";
 import { useRoom } from "../../contexts/RoomContext";
 import type { AppTab } from "../../types/navigation";
 
@@ -21,6 +23,8 @@ export default function AppLayout({ activeTab, children, dday, onTabChange }: Ap
     <>
       <div className="bg" aria-hidden="true" />
       <LockScreen />
+      <CinematicIntro dday={dday} />
+      <OnboardingGuide />
       <InstallBanner />
 
       <div className="app">

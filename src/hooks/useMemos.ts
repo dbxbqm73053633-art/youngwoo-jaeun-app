@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
 import { addMemo, clearMemos, deleteMemo, listMemos } from "../services/memoService";
+import { assertAdminRole } from "../services/permissionService";
+import type { RoomRole } from "../services/roomService";
 import type { MemoRecord } from "../types";
 
-export function useMemos(roomId: string | null) {
+export function useMemos(roomId: string | null, role: RoomRole | null = "admin") {
   const [memos, setMemos] = useState<MemoRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -22,21 +24,24 @@ export function useMemos(roomId: string | null) {
 
   const createMemo = useCallback(async (title: string, body: string) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await addMemo(roomId, { title, body, createdAt: Date.now() });
     await reload();
-  }, [reload, roomId]);
+  }, [reload, role, roomId]);
 
   const removeMemo = useCallback(async (memoId: string) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await deleteMemo(roomId, memoId);
     await reload();
-  }, [reload, roomId]);
+  }, [reload, role, roomId]);
 
   const removeAllMemos = useCallback(async () => {
     if (!roomId) return;
+    assertAdminRole(role);
     await clearMemos(roomId);
     await reload();
-  }, [reload, roomId]);
+  }, [reload, role, roomId]);
 
   return { memos, loading, error, reload, createMemo, removeMemo, removeAllMemos };
 }

@@ -1,5 +1,7 @@
 ﻿import { useCallback, useMemo, useState } from "react";
+import { assertAdminRole } from "../services/permissionService";
 import { deletePhoto, listAlbums, listPhotos, setPhotoAsCover, updatePhoto, uploadPhotoFile } from "../services/photoService";
+import type { RoomRole } from "../services/roomService";
 import type { PhotoRecord } from "../types";
 
 export type PhotoSortMode = "new" | "old" | "custom";
@@ -15,7 +17,7 @@ function sortPhotos(rows: PhotoRecord[], sortMode: PhotoSortMode) {
   return sorted;
 }
 
-export function usePhotos(roomId: string | null, pageSize = 18) {
+export function usePhotos(roomId: string | null, pageSize = 18, role: RoomRole | null = "admin") {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [albums, setAlbums] = useState<string[]>([]);
   const [album, setAlbum] = useState("__ALL__");
@@ -46,44 +48,50 @@ export function usePhotos(roomId: string | null, pageSize = 18) {
 
   const removePhoto = useCallback(async (photoId: string) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await deletePhoto(roomId, photoId);
     await reload(album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   const removePhotos = useCallback(async (photoIds: string[]) => {
     if (!roomId) return;
+    assertAdminRole(role);
     for (const photoId of photoIds) {
       await deletePhoto(roomId, photoId);
     }
     await reload(album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   const uploadPhotos = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => {
     if (!roomId) return;
+    assertAdminRole(role);
     for (const file of files) {
       if (!file.type.startsWith("image/")) continue;
       await uploadPhotoFile(roomId, file, metadata);
     }
     await reload(metadata.album || album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   const updatePhotoMeta = useCallback(async (photoId: string, patch: Partial<PhotoRecord>) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await updatePhoto(roomId, photoId, patch);
     await reload(album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   const movePhotosToAlbum = useCallback(async (photoIds: string[], nextAlbum: string) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await Promise.all(photoIds.map((photoId) => updatePhoto(roomId, photoId, { album: nextAlbum })));
     await reload(album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   const setCoverPhoto = useCallback(async (photoId: string) => {
     if (!roomId) return;
+    assertAdminRole(role);
     await setPhotoAsCover(roomId, photoId);
     await reload(album);
-  }, [album, reload, roomId]);
+  }, [album, reload, role, roomId]);
 
   return {
     photos,

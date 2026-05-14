@@ -1,13 +1,20 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, type CollectionReference } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { logResolvedFirestorePath, resolveRoomDocumentSegments, resolveRoomId, resolvedRoomDocumentPath, resolvedRoomPath } from "./roomService";
 import type { MemoRecord } from "../types";
 
 export function memosCollection(roomId: string): CollectionReference {
-  return collection(db, "rooms", roomId, "memos");
+  const cleanRoomId = resolveRoomId(roomId);
+  const roomPath = resolvedRoomPath(roomId);
+  logResolvedFirestorePath("resolved room path", roomPath);
+  return collection(db, "rooms", cleanRoomId, "memos");
 }
 
 export function memoDocument(roomId: string, memoId: string) {
-  return doc(db, "rooms", roomId, "memos", memoId);
+  const path = resolvedRoomDocumentPath(roomId, "memos", memoId);
+  const segments = resolveRoomDocumentSegments(roomId, "memos", memoId);
+  logResolvedFirestorePath("resolved document path", path);
+  return doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId);
 }
 
 export async function listMemos(roomId: string, maxRows = 100): Promise<MemoRecord[]> {

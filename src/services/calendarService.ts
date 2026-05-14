@@ -1,14 +1,21 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where, type CollectionReference } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
+import { logResolvedFirestorePath, resolveRoomDocumentSegments, resolveRoomId, resolvedRoomDocumentPath, resolvedRoomPath } from "./roomService";
 import type { DiaryEntry, DiaryPhoto } from "../types";
 
 export function diariesCollection(roomId: string): CollectionReference {
-  return collection(db, "rooms", roomId, "diaries");
+  const cleanRoomId = resolveRoomId(roomId);
+  const roomPath = resolvedRoomPath(roomId);
+  logResolvedFirestorePath("resolved room path", roomPath);
+  return collection(db, "rooms", cleanRoomId, "diaries");
 }
 
 export function diaryDocument(roomId: string, dateKey: string) {
-  return doc(db, "rooms", roomId, "diaries", dateKey);
+  const path = resolvedRoomDocumentPath(roomId, "diaries", dateKey);
+  const segments = resolveRoomDocumentSegments(roomId, "diaries", dateKey);
+  logResolvedFirestorePath("resolved document path", path);
+  return doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId);
 }
 
 export async function listDiaryMonth(roomId: string, monthKey: string): Promise<DiaryEntry[]> {
@@ -51,7 +58,7 @@ export async function deleteDiary(roomId: string, dateKey: string) {
 }
 
 export async function uploadDiaryPhoto(roomId: string, dateKey: string, photoId: string, blob: Blob): Promise<DiaryPhoto> {
-  const path = `rooms/${roomId}/diaries/${dateKey}/${photoId}.jpg`;
+  const path = `rooms/${resolveRoomId(roomId)}/diaries/${dateKey}/${photoId}.jpg`;
   const ref = storageRef(storage, path);
   await uploadBytes(ref, blob, { contentType: "image/jpeg" });
 

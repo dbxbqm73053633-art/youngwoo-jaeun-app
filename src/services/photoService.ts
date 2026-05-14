@@ -1,6 +1,7 @@
 ﻿import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where, type CollectionReference } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
+import { logResolvedFirestorePath, resolveRoomDocumentSegments, resolveRoomId, resolvedRoomDocumentPath, resolvedRoomPath } from "./roomService";
 import type { PhotoRecord } from "../types";
 
 const MAX_IMAGE_LONG_SIDE = 1600;
@@ -8,11 +9,17 @@ const JPG_QUALITY = 0.86;
 const DEFAULT_ALBUM = "기본앨범";
 
 export function photosCollection(roomId: string): CollectionReference {
-  return collection(db, "rooms", roomId, "photos");
+  const cleanRoomId = resolveRoomId(roomId);
+  const roomPath = resolvedRoomPath(roomId);
+  logResolvedFirestorePath("resolved room path", roomPath);
+  return collection(db, "rooms", cleanRoomId, "photos");
 }
 
 export function photoDocument(roomId: string, photoId: string) {
-  return doc(db, "rooms", roomId, "photos", photoId);
+  const path = resolvedRoomDocumentPath(roomId, "photos", photoId);
+  const segments = resolveRoomDocumentSegments(roomId, "photos", photoId);
+  logResolvedFirestorePath("resolved document path", path);
+  return doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId);
 }
 
 function normalizeAlbum(value: unknown) {
@@ -163,7 +170,7 @@ export async function uploadPhotoFile(
     thumbnailUrl: "",
     storagePath: "",
   });
-  const path = `rooms/${roomId}/photos/${docRef.id}.jpg`;
+  const path = `rooms/${resolveRoomId(roomId)}/photos/${docRef.id}.jpg`;
 
   try {
     const blob = await fileToJpegBlobCompressed(file);

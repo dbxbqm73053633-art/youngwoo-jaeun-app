@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roomRef(coupleCode) {
+      return /databases/(default)/documents/rooms/$(coupleCode);
+    }
+
+    function roomExists(coupleCode) {
+      return firestore.exists(roomRef(coupleCode));
+    }
+
+    function roomData(coupleCode) {
+      return firestore.get(roomRef(coupleCode)).data;
+    }
+
+    function memberRecord(coupleCode) {
+      return roomData(coupleCode).members[request.auth.uid];
+    }
+
+    function isRoomMember(coupleCode) {
+      return signedIn()
+        && roomExists(coupleCode)
+        && memberRecord(coupleCode) != null
+        && memberRecord(coupleCode).role in ['admin', 'viewer'];
+    }
+
+    function isRoomAdmin(coupleCode) {
+      return isRoomMember(coupleCode)
+        && memberRecord(coupleCode).role == 'admin';
+    }
+
+    function isImageUpload() {
+      return request.resource != null
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /rooms/{coupleCode}/photos/{photoPath=**} {
+      allow read: if isRoomMember(coupleCode);
+      allow create, update: if isRoomAdmin(coupleCode) && isImageUpload();
+      allow delete: if isRoomAdmin(coupleCode);
+    }
+
+    match /rooms/{coupleCode}/diaries/{diaryPath=**} {
+      allow read: if isRoomMember(coupleCode);
+      allow create, update: if isRoomAdmin(coupleCode) && isImageUpload();
+      allow delete: if isRoomAdmin(coupleCode);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -20,7 +20,7 @@ function firstDateKeyOfMonth(date: Date) {
 }
 
 export default function CalendarScreen({ onReady }: CalendarScreenProps) {
-  const { roomId } = useRoom();
+  const { admin, role, roomId } = useRoom();
   const {
     cursor,
     entries,
@@ -33,7 +33,7 @@ export default function CalendarScreen({ onReady }: CalendarScreenProps) {
     selectedEntry,
     setCursor,
     setSelectedDateKey,
-  } = useCalendar(roomId);
+  } = useCalendar(roomId, new Date(), role);
 
   useEffect(() => {
     onReady?.();
@@ -76,6 +76,7 @@ export default function CalendarScreen({ onReady }: CalendarScreenProps) {
           />
           <CalendarEventForm
             roomId={roomId}
+            editable={admin}
             selectedDateKey={selectedDateKey}
             selectedEntry={selectedEntry}
             onSelectDate={handleSelectDate}

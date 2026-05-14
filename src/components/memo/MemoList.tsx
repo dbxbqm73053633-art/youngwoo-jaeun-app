@@ -14,8 +14,8 @@ function formatMemoDate(timestamp: number) {
 }
 
 export default function MemoList() {
-  const { roomId } = useRoom();
-  const { error, loading, memos, reload, removeMemo } = useMemos(roomId);
+  const { admin, role, roomId } = useRoom();
+  const { error, loading, memos, reload, removeMemo } = useMemos(roomId, role);
   const requestConfirm = useConfirm();
   const [deleteError, setDeleteError] = useState("");
 
@@ -25,6 +25,7 @@ export default function MemoList() {
 
   const handleDelete = useCallback(async (id: string) => {
     setDeleteError("");
+    if (!admin) return;
     const ok = await requestConfirm({
       title: "메모 삭제",
       message: "이 메모를 삭제할까요?",
@@ -37,7 +38,7 @@ export default function MemoList() {
     } catch {
       setDeleteError("메모 삭제에 실패했어요. 잠시 후 다시 시도해주세요.");
     }
-  }, [requestConfirm, removeMemo]);
+  }, [admin, requestConfirm, removeMemo]);
 
   return (
     <article className="card">
@@ -54,7 +55,7 @@ export default function MemoList() {
               title={memo.title || "제목 없음"}
               body={memo.body}
               date={formatMemoDate(memo.createdAt)}
-              onDelete={handleDelete}
+              onDelete={admin ? handleDelete : undefined}
             />
           ))
         ) : null}

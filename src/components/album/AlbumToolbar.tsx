@@ -5,6 +5,7 @@ type AlbumToolbarProps = {
   albums: string[];
   sortMode: PhotoSortMode;
   managementMode: boolean;
+  editable?: boolean;
   selectedCount: number;
   onAlbumChange: (album: string) => void;
   onSortModeChange: (sortMode: PhotoSortMode) => void;
@@ -27,6 +28,7 @@ export default function AlbumToolbar({
   albums,
   sortMode,
   managementMode,
+  editable = true,
   selectedCount,
   onAlbumChange,
   onSortModeChange,
@@ -53,11 +55,11 @@ export default function AlbumToolbar({
           ))}
         </div>
         <button className="btn btn--primary" type="button" onClick={onReplay}>추억 재생하기</button>
-        <button className="btn btn--soft" type="button" onClick={onToggleManagement}>{managementMode ? "선택 종료" : "관리"}</button>
+        {editable ? <button className="btn btn--soft" type="button" onClick={onToggleManagement}>{managementMode ? "선택 종료" : "관리"}</button> : null}
         <button className="btn btn--ghost" type="button" id="resetPaging" onClick={onResetPaging}>처음으로</button>
       </div>
 
-      {managementMode ? (
+      {editable && managementMode ? (
         <div className="selectionBar" aria-live="polite">
           <strong>{selectedCount}장 선택</strong>
           <button className="btn btn--soft" type="button" onClick={onMoveSelected} disabled={!selectedCount}>앨범 이동/수정</button>

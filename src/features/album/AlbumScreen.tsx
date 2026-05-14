@@ -1,5 +1,6 @@
 ﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import AlbumToolbar from "../../components/album/AlbumToolbar";
+import { memo } from "react";
 import { createPortal } from "react-dom";
 import PhotoGrid from "../../components/album/PhotoGrid";
 import { useConfirm } from "../../components/layout/ModalProvider";
@@ -24,7 +25,7 @@ type PhotoUploadPanelProps = {
   uploading?: boolean;
 };
 
-function PhotoUploadPanel({ disabled = false, onUpload, uploading = false }: PhotoUploadPanelProps) {
+const PhotoUploadPanel = memo(function PhotoUploadPanel({ disabled = false, onUpload, uploading = false }: PhotoUploadPanelProps) {
   const [album, setAlbum] = useState("");
   const [date, setDate] = useState(() => toISODateInputValue(new Date()));
   const [caption, setCaption] = useState("");
@@ -69,7 +70,7 @@ function PhotoUploadPanel({ disabled = false, onUpload, uploading = false }: Pho
       </div>
     </article>
   );
-}
+});
 
 function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: () => void }) {
   const [index, setIndex] = useState(0);
@@ -95,6 +96,23 @@ function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: ()
   }, [index, photos.length, playing]);
 
   useEffect(() => {
+    if (!photos.length) return;
+    const urls = [
+      photos[(index + 1) % photos.length]?.url,
+      photos[(index - 1 + photos.length) % photos.length]?.url,
+    ].filter(Boolean);
+    const preloads = urls.map((url) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url as string;
+      return image;
+    });
+    return () => {
+      preloads.forEach((image) => { image.src = ""; });
+    };
+  }, [index, photos]);
+
+  useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
       if (event.key === "ArrowRight") setIndex((currentIndex) => (currentIndex + 1) % photos.length);
@@ -117,7 +135,7 @@ function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: ()
       <button className="replay__nav replay__nav--prev" type="button" aria-label="이전 사진" onClick={() => setIndex((currentIndex) => (currentIndex - 1 + photos.length) % photos.length)}>‹</button>
       <button className="replay__nav replay__nav--next" type="button" aria-label="다음 사진" onClick={() => setIndex((currentIndex) => (currentIndex + 1) % photos.length)}>›</button>
       <div className="replay__stage" key={current.id || current.url}>
-        <img src={current.url} alt={current.caption || "추억 사진"} decoding="async" />
+        <img src={current.url} alt={current.caption || "추억 사진"} decoding="async" fetchpriority="high" />
       </div>
       <div className="replay__caption">
         <span>{current.album} · {formatPhotoDate(current.date)}</span>
@@ -132,7 +150,7 @@ function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: ()
 }
 
 export default function AlbumScreen({ onReady }: AlbumScreenProps) {
-  const { roomId, unlocked } = useRoom();
+  const { admin, role, roomId, unlocked } = useRoom();
   const requestConfirm = useConfirm();
   const {
     album,
@@ -153,7 +171,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     updatePhotoMeta,
     uploadPhotos,
     visiblePhotos,
-  } = usePhotos(roomId);
+  } = usePhotos(roomId, 18, role);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [managementMode, setManagementMode] = useState(false);
@@ -168,7 +186,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
 
   const handleUpload = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => {
     setActionError("");
-    if (!unlocked || !roomId) {
+    if (!unlocked || !roomId || !admin) {
       setActionError("입장 후 사진을 업로드할 수 있어요.");
       return;
     }
@@ -180,10 +198,11 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     } finally {
       setUploading(false);
     }
-  }, [roomId, unlocked, uploadPhotos]);
+  }, [admin, roomId, unlocked, uploadPhotos]);
 
   const handleDeletePhoto = useCallback(async (id: string) => {
     setActionError("");
+    if (!admin) return;
     const ok = await requestConfirm({ title: "사진 삭제", message: "이 사진을 삭제할까요? Storage에서도 지워져요.", confirmLabel: "삭제", destructive: true });
     if (!ok) return;
     try {
@@ -191,9 +210,10 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     } catch {
       setActionError("사진 삭제에 실패했어요. Firebase 연결을 확인하고 다시 시도해주세요.");
     }
-  }, [requestConfirm, removePhoto]);
+  }, [admin, requestConfirm, removePhoto]);
 
   const handleDeleteSelected = useCallback(async () => {
+    if (!admin) return;
     const ids = [...selectedIds];
     if (!ids.length) return;
     const ok = await requestConfirm({ title: "선택 사진 삭제", message: `${ids.length}장의 사진을 삭제할까요? Storage에서도 지워져요.`, confirmLabel: "삭제", destructive: true });
@@ -204,9 +224,10 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     } catch {
       setActionError("선택한 사진을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.");
     }
-  }, [removePhotos, requestConfirm, selectedIds]);
+  }, [admin, removePhotos, requestConfirm, selectedIds]);
 
   const handleMoveSelected = useCallback(async () => {
+    if (!admin) return;
     const ids = [...selectedIds];
     if (!ids.length) return;
     const nextAlbum = window.prompt("이동할 앨범 이름을 입력해주세요.", album === "__ALL__" ? "기본앨범" : album)?.trim();
@@ -217,9 +238,10 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     } catch {
       setActionError("앨범 이동에 실패했어요. Firebase 연결을 확인해주세요.");
     }
-  }, [album, movePhotosToAlbum, selectedIds]);
+  }, [admin, album, movePhotosToAlbum, selectedIds]);
 
   const handleBringSelectedFirst = useCallback(async () => {
+    if (!admin) return;
     const ids = [...selectedIds];
     if (!ids.length) return;
     try {
@@ -230,7 +252,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
     } catch {
       setActionError("직접정렬 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
     }
-  }, [photos, selectedIds, setSortMode, updatePhotoMeta]);
+  }, [admin, photos, selectedIds, setSortMode, updatePhotoMeta]);
 
   const handleAlbumChange = useCallback((nextAlbum: string) => {
     setAlbum(nextAlbum);
@@ -243,6 +265,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
   }, [setPage, setSortMode]);
 
   const toggleSelected = useCallback((id: string) => {
+    if (!admin) return;
     if (!id) return;
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -250,7 +273,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
       else next.add(id);
       return next;
     });
-  }, []);
+  }, [admin]);
 
   const showNext = useCallback(() => {
     setLightboxIndex((current) => visiblePhotos.length ? (current === null ? 0 : (current + 1) % visiblePhotos.length) : null);
@@ -262,21 +285,23 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
 
   const handleSaveLightbox = useCallback(async (patch: Partial<PhotoRecord>) => {
     if (!lightboxPhoto?.id) return;
+    if (!admin) return;
     try {
       await updatePhotoMeta(lightboxPhoto.id, patch);
     } catch {
       setActionError("사진 정보 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
       throw new Error("Photo save failed");
     }
-  }, [lightboxPhoto?.id, updatePhotoMeta]);
+  }, [admin, lightboxPhoto?.id, updatePhotoMeta]);
 
   const handleSetCover = useCallback(async (id: string) => {
+    if (!admin) return;
     try {
       await setCoverPhoto(id);
     } catch {
       setActionError("대표사진 설정에 실패했어요. 잠시 후 다시 시도해주세요.");
     }
-  }, [setCoverPhoto]);
+  }, [admin, setCoverPhoto]);
 
   const startReplay = useCallback(() => {
     if (!visiblePhotos.length) {
@@ -296,7 +321,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
           </div>
         </div>
 
-        <PhotoUploadPanel disabled={!unlocked} onUpload={handleUpload} uploading={uploading} />
+        {admin ? <PhotoUploadPanel disabled={!unlocked} onUpload={handleUpload} uploading={uploading} /> : null}
 
         <article className="card albumGalleryCard">
           <div className="albumGalleryCard__head">
@@ -313,11 +338,12 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
             albums={albums}
             sortMode={sortMode}
             managementMode={managementMode}
+            editable={admin}
             selectedCount={selectedIds.size}
             onAlbumChange={handleAlbumChange}
             onSortModeChange={handleSortChange}
             onResetPaging={() => setPage(1)}
-            onToggleManagement={() => setManagementMode((value) => !value)}
+            onToggleManagement={() => admin && setManagementMode((value) => !value)}
             onReplay={startReplay}
             onDeleteSelected={handleDeleteSelected}
             onMoveSelected={handleMoveSelected}
@@ -328,6 +354,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
             photos={visiblePhotos}
             totalCount={photos.length}
             managementMode={managementMode}
+            editable={admin}
             selectedIds={selectedIds}
             onDeletePhoto={handleDeletePhoto}
             onLoadMore={() => setPage((currentPage) => currentPage + 1)}
@@ -339,7 +366,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
 
       {lightboxPhoto ? (
         <Suspense fallback={null}>
-          <PhotoModal photo={lightboxPhoto} onClose={() => setLightboxIndex(null)} onNext={showNext} onPrev={showPrev} onDelete={handleDeletePhoto} onSetCover={handleSetCover} onSave={handleSaveLightbox} />
+          <PhotoModal photo={lightboxPhoto} editable={admin} onClose={() => setLightboxIndex(null)} onNext={showNext} onPrev={showPrev} onDelete={handleDeletePhoto} onSetCover={handleSetCover} onSave={handleSaveLightbox} />
         </Suspense>
       ) : null}
 

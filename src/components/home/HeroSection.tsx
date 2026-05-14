@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 type HeroSectionProps = {
   counter: {
     startDateLabel: string;
@@ -6,9 +8,11 @@ type HeroSectionProps = {
 };
 
 export default function HeroSection({ counter }: HeroSectionProps) {
+  const [mediaReady, setMediaReady] = useState(false);
+
   return (
     <section className="hero" aria-label="메인 영상">
-      <div className="hero__media">
+      <div className={`hero__media${mediaReady ? " hero__media--ready" : " hero__media--loading"}`}>
         <video
           className="hero__video"
           src="./images/영재.mp4"
@@ -18,6 +22,9 @@ export default function HeroSection({ counter }: HeroSectionProps) {
           playsInline
           preload="metadata"
           poster="./images/영우재은.png"
+          onCanPlay={() => setMediaReady(true)}
+          onLoadedData={() => setMediaReady(true)}
+          onError={() => setMediaReady(true)}
         />
 
         <div className="hero__shine" aria-hidden="true" />

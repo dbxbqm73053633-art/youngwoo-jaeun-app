@@ -6,6 +6,7 @@ type PhotoGridProps = {
   hasMore: boolean;
   photos: PhotoRecord[];
   totalCount: number;
+  editable?: boolean;
   managementMode?: boolean;
   selectedIds: Set<string>;
   onDeletePhoto: (id: string) => void;
@@ -18,6 +19,7 @@ function PhotoGrid({
   hasMore,
   photos,
   totalCount,
+  editable = true,
   managementMode = false,
   selectedIds,
   onDeletePhoto,
@@ -47,11 +49,13 @@ function PhotoGrid({
                 caption={caption}
                 album={photo.album}
                 isCover={photo.isCover}
+                priority={index < 4}
                 selected={selectedIds.has(id)}
-                managementMode={managementMode}
+                managementMode={editable && managementMode}
                 onDelete={onDeletePhoto}
                 onOpen={onOpenPhoto}
                 onToggleSelected={onToggleSelected}
+                canDelete={editable}
               />
             );
           })

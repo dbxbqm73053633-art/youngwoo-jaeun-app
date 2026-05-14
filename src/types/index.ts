@@ -1,4 +1,5 @@
 ﻿export type RoomConfig = {
+  coupleCode?: string;
   nameA: string;
   nameB: string;
   startDate: number;

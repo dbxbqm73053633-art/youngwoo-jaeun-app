@@ -5,6 +5,7 @@ import type { DiaryEntry, DiaryPhoto } from "../../types";
 
 type CalendarEventFormProps = {
   roomId: string | null;
+  editable?: boolean;
   selectedDateKey: string;
   selectedEntry: DiaryEntry | null;
   onSelectDate: (dateKey: string) => void;
@@ -17,7 +18,7 @@ function dateKeyToDate(dateKey: string) {
   return new Date(year, (month || 1) - 1, day || 1, 0, 0, 0);
 }
 
-export default function CalendarEventForm({ roomId, selectedDateKey, selectedEntry, onSelectDate, onSave, onDelete }: CalendarEventFormProps) {
+export default function CalendarEventForm({ roomId, editable = true, selectedDateKey, selectedEntry, onSelectDate, onSave, onDelete }: CalendarEventFormProps) {
   const requestConfirm = useConfirm();
   const [memo, setMemo] = useState("");
   const [anniversary, setAnniversary] = useState("");
@@ -49,7 +50,7 @@ export default function CalendarEventForm({ roomId, selectedDateKey, selectedEnt
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-    if (!roomId) {
+    if (!roomId || !editable) {
       setError("입장 후 다이어리를 저장할 수 있어요.");
       return;
     }
@@ -86,7 +87,7 @@ export default function CalendarEventForm({ roomId, selectedDateKey, selectedEnt
 
   const handleDelete = async () => {
     setError("");
-    if (!roomId) {
+    if (!roomId || !editable) {
       setError("입장 후 다이어리를 삭제할 수 있어요.");
       return;
     }
@@ -109,25 +110,25 @@ export default function CalendarEventForm({ roomId, selectedDateKey, selectedEnt
     <article className="card card--diaryEditor">
       <div className="card__title">선택한 날짜 기록</div>
       <form id="diaryForm" className="form" onSubmit={handleSubmit}>
-        <label className="label">날짜<input id="diaryDate" className="input" type="date" value={selectedDateKey} onChange={(event) => onSelectDate(event.target.value)} disabled={saving} /></label>
-        <label className="label">메모<textarea id="diaryMemo" className="textarea" rows={5} maxLength={1000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="오늘 같이 있었던 일, 기억하고 싶은 장면, 서로에게 하고 싶은 말들" disabled={saving} /></label>
-        <label className="label">기념일 등록<input id="diaryAnniversary" className="input" type="text" maxLength={60} value={anniversary} onChange={(event) => setAnniversary(event.target.value)} placeholder="예: 첫 드라이브, 300일 벚꽃 데이트" disabled={saving} /></label>
-        <div className="diaryUploadPicker">
+        <label className="label">날짜<input id="diaryDate" className="input" type="date" value={selectedDateKey} onChange={(event) => onSelectDate(event.target.value)} disabled={!editable || saving} /></label>
+        <label className="label">메모<textarea id="diaryMemo" className="textarea" rows={5} maxLength={1000} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="오늘 같이 있었던 일, 기억하고 싶은 장면, 서로에게 하고 싶은 말들" disabled={!editable || saving} /></label>
+        <label className="label">기념일 등록<input id="diaryAnniversary" className="input" type="text" maxLength={60} value={anniversary} onChange={(event) => setAnniversary(event.target.value)} placeholder="예: 첫 드라이브, 300일 벚꽃 데이트" disabled={!editable || saving} /></label>
+        {editable ? <div className="diaryUploadPicker">
           <label className="diaryUploadPicker__button" htmlFor="diaryPhotos">사진 선택하기</label>
           <span className="diaryUploadPicker__count">{selectedPhotoText}</span>
           <input id="diaryPhotos" className="diaryUploadPicker__input" type="file" accept="image/*" multiple onChange={(event) => setFiles([...(event.target.files || [])])} disabled={saving} />
-        </div>
+        </div> : null}
         <div className="diaryPhotoList" id="diaryPhotoList" data-react-render="true">
           {photos.length ? photos.map((photo, index) => (
             <div className="diaryPhoto" key={`${photo.storagePath}-${index}`}>
-              <img className="diaryPhoto__img" src={photo.url} alt={`다이어리 사진 ${index + 1}`} loading="lazy" />
-              <button className="diaryPhoto__remove" type="button" onClick={() => handleRemovePhoto(index)} disabled={saving}>삭제</button>
+              <img className="diaryPhoto__img" src={photo.url} alt={`다이어리 사진 ${index + 1}`} loading="lazy" decoding="async" />
+              {editable ? <button className="diaryPhoto__remove" type="button" onClick={() => handleRemovePhoto(index)} disabled={saving}>삭제</button> : null}
             </div>
           )) : <p className="hint">아직 등록된 사진이 없어요.</p>}
         </div>
         <div className="row">
-          <button className="btn btn--primary" type="submit" disabled={saving}>{saving ? "저장 중..." : "이 날짜 저장"}</button>
-          <button className="btn btn--soft" type="button" id="diaryDeleteBtn" onClick={handleDelete} disabled={saving}>이 날짜 삭제</button>
+          <button className="btn btn--primary" type="submit" disabled={!editable || saving}>{saving ? "저장 중..." : "이 날짜 저장"}</button>
+          <button className="btn btn--soft" type="button" id="diaryDeleteBtn" onClick={handleDelete} disabled={!editable || saving}>이 날짜 삭제</button>
         </div>
         {error ? <p className="hint errorText">{error}</p> : <p className="hint" id="diarySaveHint">{hint}</p>}
       </form>

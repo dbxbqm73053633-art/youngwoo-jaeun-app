@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { logResolvedFirestorePath, resolveRoomDocumentSegments, resolveRoomId, resolvedRoomDocumentPath, resolvedRoomPath } from "./roomService";
 import type { DailyPromptRecord } from "../types";
 
 const DAILY_PROMPTS = [
@@ -36,7 +37,10 @@ export function questionForDate(dateKey: string) {
 }
 
 export async function getTodayPrompt(roomId: string, key = todayKey()): Promise<DailyPromptRecord> {
-  const ref = doc(db, "rooms", roomId, "dailyPrompts", key);
+  const path = resolvedRoomDocumentPath(roomId, "dailyPrompts", key);
+  const segments = resolveRoomDocumentSegments(roomId, "dailyPrompts", key);
+  logResolvedFirestorePath("resolved document path", path);
+  const ref = doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId);
   const snap = await getDoc(ref);
   const data = snap.exists() ? snap.data() : {};
   return {
@@ -48,16 +52,25 @@ export async function getTodayPrompt(roomId: string, key = todayKey()): Promise<
 }
 
 export async function saveTodayPrompt(roomId: string, prompt: DailyPromptRecord, key = todayKey()) {
-  await setDoc(doc(db, "rooms", roomId, "dailyPrompts", key), prompt, { merge: true });
+  const path = resolvedRoomDocumentPath(roomId, "dailyPrompts", key);
+  const segments = resolveRoomDocumentSegments(roomId, "dailyPrompts", key);
+  logResolvedFirestorePath("resolved document path", path);
+  await setDoc(doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId), prompt, { merge: true });
 }
 
 export async function getRecentMoods(roomId: string) {
-  const snap = await getDocs(query(collection(db, "rooms", roomId, "moods"), orderBy("dateKey", "desc"), limit(7)));
+  const cleanRoomId = resolveRoomId(roomId);
+  const roomPath = resolvedRoomPath(roomId);
+  logResolvedFirestorePath("resolved room path", roomPath);
+  const snap = await getDocs(query(collection(db, "rooms", cleanRoomId, "moods"), orderBy("dateKey", "desc"), limit(7)));
   return snap.docs
     .map((item) => ({ id: item.id, ...item.data(), mood: String(item.data().mood || ""), dateKey: String(item.data().dateKey || item.id) }))
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey, "ko"));
 }
 
 export async function saveMood(roomId: string, mood: string, key = todayKey()) {
-  await setDoc(doc(db, "rooms", roomId, "moods", key), { mood, dateKey: key, updatedAt: Date.now() }, { merge: true });
+  const path = resolvedRoomDocumentPath(roomId, "moods", key);
+  const segments = resolveRoomDocumentSegments(roomId, "moods", key);
+  logResolvedFirestorePath("resolved document path", path);
+  await setDoc(doc(db, "rooms", segments.roomId, segments.collectionName, segments.documentId), { mood, dateKey: key, updatedAt: Date.now() }, { merge: true });
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useRoom } from "../../contexts/RoomContext";
 
 const allowedThemes = ["romance", "minimal", "lavender"];
 
@@ -9,6 +10,7 @@ function applyTheme(theme: string) {
 }
 
 export default function ThemeSettings() {
+  const { admin } = useRoom();
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("ywjy_theme") || "romance";
     return allowedThemes.includes(saved) ? saved : "romance";
@@ -21,6 +23,7 @@ export default function ThemeSettings() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!admin) return;
     applyTheme(theme);
     setHint("테마가 적용되었어요.");
   };
@@ -31,14 +34,14 @@ export default function ThemeSettings() {
       <form id="themeForm" className="form" onSubmit={handleSubmit}>
         <label className="label">
           테마 선택
-          <select id="themeSelect" className="input" value={theme} onChange={(event) => setTheme(event.target.value)}>
+          <select id="themeSelect" className="input" value={theme} onChange={(event) => setTheme(event.target.value)} disabled={!admin}>
             <option value="romance">Pink Romance</option>
             <option value="minimal">Soft Minimal</option>
             <option value="lavender">Lavender Dream</option>
           </select>
         </label>
         <div className="row">
-          <button className="btn btn--soft" type="submit">테마 적용</button>
+          <button className="btn btn--soft" type="submit" disabled={!admin}>테마 적용</button>
           <span className="promptForm__hint" id="themeHint">{hint}</span>
         </div>
       </form>

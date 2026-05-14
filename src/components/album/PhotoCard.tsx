@@ -8,6 +8,8 @@ type PhotoCardProps = {
   caption: string;
   album?: string;
   isCover?: boolean;
+  canDelete?: boolean;
+  priority?: boolean;
   selected?: boolean;
   managementMode?: boolean;
   onDelete?: (id: string) => void;
@@ -15,7 +17,7 @@ type PhotoCardProps = {
   onToggleSelected?: (id: string) => void;
 };
 
-function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, selected = false, managementMode = false, onDelete, onOpen, onToggleSelected }: PhotoCardProps) {
+function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, canDelete = true, priority = false, selected = false, managementMode = false, onDelete, onOpen, onToggleSelected }: PhotoCardProps) {
   const handleClick = () => {
     if (managementMode) onToggleSelected?.(id);
     else onOpen?.(index);
@@ -23,7 +25,7 @@ function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, selected
 
   return (
     <figure className={`photo${selected ? " photo--selected" : ""}${isCover ? " photo--cover" : ""}`} data-id={id} data-idx={index} onClick={handleClick}>
-      <img className="photo__img" src={thumbUrl || url} alt={caption} loading="lazy" decoding="async" />
+      <img className="photo__img" src={thumbUrl || url} alt={caption} loading={priority ? "eager" : "lazy"} decoding="async" fetchpriority={priority ? "high" : "auto"} />
       <div className="photo__shade" />
       <figcaption className="photo__caption">
         {album ? <span className="photo__album">{album}</span> : null}
@@ -32,7 +34,7 @@ function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, selected
       {isCover ? <span className="photo__coverBadge">대표</span> : null}
       {managementMode ? (
         <span className={`photo__check${selected ? " photo__check--on" : ""}`} aria-hidden="true">✓</span>
-      ) : (
+      ) : canDelete ? (
         <button
           className="photo__del"
           type="button"
@@ -46,7 +48,7 @@ function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, selected
         >
           ×
         </button>
-      )}
+      ) : null}
     </figure>
   );
 }

@@ -1,0 +1,163 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roomRef(coupleCode) {
+      return /databases/$(database)/documents/rooms/$(coupleCode);
+    }
+
+    function roomExists(coupleCode) {
+      return exists(roomRef(coupleCode));
+    }
+
+    function roomData(coupleCode) {
+      return get(roomRef(coupleCode)).data;
+    }
+
+    function memberRecord(coupleCode) {
+      return roomData(coupleCode).members[request.auth.uid];
+    }
+
+    function isRoomMember(coupleCode) {
+      return signedIn()
+        && roomExists(coupleCode)
+        && memberRecord(coupleCode) != null
+        && memberRecord(coupleCode).role in ['admin', 'viewer'];
+    }
+
+    function isRoomAdmin(coupleCode) {
+      return isRoomMember(coupleCode)
+        && memberRecord(coupleCode).role == 'admin';
+    }
+
+    function isSystemAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/systemAdmins/$(request.auth.uid));
+    }
+
+    function isValidRoomRole(role) {
+      return role in ['admin', 'viewer'];
+    }
+
+    function isOnlyCurrentUserInMembers() {
+      return request.resource.data.members is map
+        && request.resource.data.members.keys().hasOnly([request.auth.uid]);
+    }
+
+    function isOnlyCurrentUserMemberChanged() {
+      return request.resource.data.members is map
+        && resource.data.members is map
+        && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid]);
+    }
+
+    function isSelfMemberBootstrap() {
+      return signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'updatedAt'])
+        && request.resource.data.members[request.auth.uid] is map
+        && isValidRoomRole(request.resource.data.members[request.auth.uid].role)
+        && (
+          (!('members' in resource.data) && isOnlyCurrentUserInMembers())
+          || (('members' in resource.data) && isOnlyCurrentUserMemberChanged())
+        );
+    }
+
+    function validNewRoom(coupleCode) {
+      return request.resource.data.coupleCode == coupleCode
+        && request.resource.data.adminPasswordHash is string
+        && request.resource.data.viewerPasswordHash is string
+        && request.resource.data.members[request.auth.uid].role == 'admin';
+    }
+
+    function protectedRoomKeysUnchanged(coupleCode) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'members',
+        'adminPasswordHash',
+        'viewerPasswordHash',
+        'roomPasswordHash',
+        'passwordHash',
+        'roomPassword',
+        'viewerPassword',
+        'password'
+      ]);
+    }
+
+    function isLegacyPasswordMigration(coupleCode) {
+      return isRoomAdmin(coupleCode)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'adminPasswordHash',
+          'viewerPasswordHash',
+          'roomPasswordHash',
+          'passwordHash',
+          'roomPassword',
+          'viewerPassword',
+          'password',
+          'updatedAt'
+        ])
+        && !('roomPassword' in request.resource.data)
+        && !('viewerPassword' in request.resource.data)
+        && !('password' in request.resource.data);
+    }
+
+    match /rooms/{coupleCode} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Platform owner UIDs are managed in systemAdmins/{uid}. Use this for
+      // lightweight customer creation; for stricter production setups, move room
+      // creation behind an Admin SDK/Cloud Function endpoint.
+      allow create: if isSystemAdmin() && validNewRoom(coupleCode);
+      allow update: if (isRoomAdmin(coupleCode)
+        && protectedRoomKeysUnchanged(coupleCode))
+        || isSelfMemberBootstrap()
+        || isLegacyPasswordMigration(coupleCode);
+      allow delete: if false;
+
+      match /photos/{photoId} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+
+      match /memos/{memoId} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+
+      match /diaries/{dateKey} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+
+      match /calendar/{eventId} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+
+      match /dailyPrompts/{promptId} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+
+      match /moods/{moodId} {
+        allow read: if isRoomMember(coupleCode);
+        allow create, update, delete: if isRoomAdmin(coupleCode);
+      }
+    }
+
+    match /systemAdmins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    match /system/provisioners/{uid} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
