@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { PROMPT_ATMOSPHERE_LINES } from "../../constants/emotionalCopy";
 import { useRoom } from "../../contexts/RoomContext";
 import { useHomeData } from "../../hooks/useHomeData";
 import { todayKey } from "../../services/dailyService";
@@ -38,6 +39,7 @@ export default function TodayPromptCard() {
           <div className="promptHeader__date" id="promptDateLabel">{todayKey().split("-").join(".")}</div>
         </div>
         <p className="promptQuestion" id="promptQuestion">{prompt?.question || "오늘 질문을 불러오는 중..."}</p>
+        <p className="emotionalQuote promptAtmosphere">{PROMPT_ATMOSPHERE_LINES[todayKey().length % PROMPT_ATMOSPHERE_LINES.length]}</p>
 
         <form id="promptForm" className="promptForm" onSubmit={handleSubmit}>
           <label className="label">

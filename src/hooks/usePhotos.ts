@@ -1,6 +1,6 @@
 ﻿import { useCallback, useMemo, useState } from "react";
 import { assertAdminRole } from "../services/permissionService";
-import { deletePhoto, listAlbums, listPhotos, setPhotoAsCover, updatePhoto, uploadPhotoFile } from "../services/photoService";
+import { deletePhoto, listAlbums, listPhotos, setPhotoAsCover, updatePhoto, uploadPhotoFile, type PhotoUploadProgress } from "../services/photoService";
 import type { RoomRole } from "../services/roomService";
 import type { PhotoRecord } from "../types";
 
@@ -62,12 +62,17 @@ export function usePhotos(roomId: string | null, pageSize = 18, role: RoomRole |
     await reload(album);
   }, [album, reload, role, roomId]);
 
-  const uploadPhotos = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => {
+  const uploadPhotos = useCallback(async (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">, onProgress?: (progress: PhotoUploadProgress) => void) => {
     if (!roomId) return;
     assertAdminRole(role);
-    for (const file of files) {
+    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+    for (const [index, file] of imageFiles.entries()) {
       if (!file.type.startsWith("image/")) continue;
-      await uploadPhotoFile(roomId, file, metadata);
+      await uploadPhotoFile(roomId, file, metadata, {
+        fileIndex: index + 1,
+        fileCount: imageFiles.length,
+        onProgress,
+      });
     }
     await reload(metadata.album || album);
   }, [album, reload, role, roomId]);

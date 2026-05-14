@@ -21,6 +21,9 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
   const [hint, setHint] = useState("수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)");
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [dragX, setDragX] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const pinchDistance = useRef<number | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -34,7 +37,15 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
     setHint("수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)");
     setSaving(false);
     setZoom(1);
+    setIsSettingsOpen(false);
+    setIsImageLoaded(false);
+    setDragX(0);
     window.requestAnimationFrame(() => panelRef.current?.focus());
+  }, [photo]);
+
+  useEffect(() => {
+    document.body.classList.toggle("photo-modal-open", Boolean(photo));
+    return () => document.body.classList.remove("photo-modal-open");
   }, [photo]);
 
   const handleSave = async () => {
@@ -76,28 +87,39 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 2) {
       pinchDistance.current = distance(event.touches);
+      setDragX(0);
       return;
     }
     touchStartX.current = event.touches[0]?.clientX ?? null;
   };
 
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
-    if (event.touches.length !== 2 || pinchDistance.current === null) return;
-    const nextDistance = distance(event.touches);
-    if (!nextDistance) return;
-    setZoom((current) => Math.min(3, Math.max(1, current * (nextDistance / pinchDistance.current!))));
-    pinchDistance.current = nextDistance;
+    if (event.touches.length === 2 && pinchDistance.current !== null) {
+      const nextDistance = distance(event.touches);
+      if (!nextDistance) return;
+      setZoom((current) => Math.min(3, Math.max(1, current * (nextDistance / pinchDistance.current!))));
+      pinchDistance.current = nextDistance;
+      return;
+    }
+    if (touchStartX.current === null || zoom > 1.05) return;
+    const currentX = event.touches[0]?.clientX ?? touchStartX.current;
+    setDragX(Math.max(-72, Math.min(72, (currentX - touchStartX.current) * 0.42)));
   };
 
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     if (pinchDistance.current !== null) {
       pinchDistance.current = null;
+      setDragX(0);
       return;
     }
-    if (touchStartX.current === null || zoom > 1.05) return;
+    if (touchStartX.current === null || zoom > 1.05) {
+      setDragX(0);
+      return;
+    }
     const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
     const delta = endX - touchStartX.current;
     touchStartX.current = null;
+    setDragX(0);
     if (Math.abs(delta) < 56) return;
     if (delta > 0) onPrev();
     else onNext();
@@ -142,7 +164,7 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
           <button className="lightbox__nav lightbox__nav--next" type="button" id="lbNext" aria-label="다음 사진" onClick={onNext}>›</button>
 
           <div className="lightbox__stage" id="lbStage" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onWheel={handleWheel}>
-            {photo ? <img className="lightbox__img" id="lbImg" src={photo.url} alt={photo.caption || "사진 크게 보기"} draggable="false" decoding="async" fetchpriority="high" style={{ transform: `scale(${zoom})` }} /> : null}
+            {photo ? <img className={`lightbox__img${isImageLoaded ? " is-loaded" : ""}`} id="lbImg" src={photo.url} alt={photo.caption || "사진 크게 보기"} draggable="false" decoding="async" fetchpriority="high" onLoad={() => setIsImageLoaded(true)} style={{ transform: `translate3d(${dragX}px, 0, 0) scale(${zoom})` }} /> : null}
           </div>
 
           <div className="lightbox__meta lightbox__meta--premium">
@@ -155,11 +177,25 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
 
             <div className="lightbox__actions">
               <button className="btn btn--soft" type="button" onClick={handleDownload}>다운로드</button>
-              {editable ? <button className="btn btn--soft" type="button" onClick={handleSetCover} disabled={photo?.isCover}>{photo?.isCover ? "대표사진" : "대표사진으로 설정"}</button> : null}
-              {editable ? <button className="btn btn--danger" type="button" onClick={handleDelete}>삭제</button> : null}
+              {editable ? (
+                <button
+                  className="lightbox__settingsBtn"
+                  type="button"
+                  aria-expanded={isSettingsOpen}
+                  aria-label="사진 설정"
+                  onClick={() => setIsSettingsOpen((current) => !current)}
+                >
+                  ⋯
+                </button>
+              ) : null}
             </div>
 
-            {editable ? <div className="lightbox__form" aria-label="사진 정보 수정">
+            {editable ? <div className={`lightbox__editPanel${isSettingsOpen ? " show" : ""}`}>
+              <div className="lightbox__editActions">
+                <button className="btn btn--soft" type="button" onClick={handleSetCover} disabled={photo?.isCover}>{photo?.isCover ? "대표사진" : "대표사진으로 설정"}</button>
+                <button className="btn btn--danger" type="button" onClick={handleDelete}>삭제</button>
+              </div>
+              <div className="lightbox__form" aria-label="사진 정보 수정">
               <label className="lbLabel">
                 앨범
                 <input id="lbAlbum" className="input" type="text" value={album} onChange={(event) => setAlbum(event.target.value)} />
@@ -180,6 +216,7 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
                 <textarea className="textarea" rows={3} maxLength={180} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 사진에 남기고 싶은 마음" />
               </label>
               <div className="lightbox__saveHint" id="lbSaveHint">{hint} · 확대 {Math.round(zoom * 100)}%</div>
+              </div>
             </div> : null}
           </div>
         </div>

@@ -25,7 +25,7 @@ function PhotoCard({ id, index, url, thumbUrl, caption, album, isCover, canDelet
 
   return (
     <figure className={`photo${selected ? " photo--selected" : ""}${isCover ? " photo--cover" : ""}`} data-id={id} data-idx={index} onClick={handleClick}>
-      <img className="photo__img" src={thumbUrl || url} alt={caption} loading={priority ? "eager" : "lazy"} decoding="async" fetchpriority={priority ? "high" : "auto"} />
+      <img className="photo__img" src={thumbUrl || url} alt={caption} loading={priority ? "eager" : "lazy"} decoding="async" fetchpriority={priority ? "high" : "auto"} sizes="(max-width: 720px) 50vw, 33vw" />
       <div className="photo__shade" />
       <figcaption className="photo__caption">
         {album ? <span className="photo__album">{album}</span> : null}

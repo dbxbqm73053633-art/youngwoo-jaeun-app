@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from "react";
+import { MEMO_EMPTY_LINES } from "../../constants/emotionalCopy";
 import { useRoom } from "../../contexts/RoomContext";
 import { useMemos } from "../../hooks/useMemos";
 import { useConfirm } from "../layout/ModalProvider";
@@ -60,7 +61,11 @@ export default function MemoList() {
           ))
         ) : null}
         {!loading && !error && !memos.length ? (
-          <p className="hint">아직 메모가 없어요. 오늘 있었던 일을 살짝 남겨볼까요?</p>
+          <div className="memoEmpty emptyState">
+            <strong>아직 메모가 없어요</strong>
+            <span>{MEMO_EMPTY_LINES[0]}</span>
+            <small>{MEMO_EMPTY_LINES[1]}</small>
+          </div>
         ) : null}
       </div>
     </article>

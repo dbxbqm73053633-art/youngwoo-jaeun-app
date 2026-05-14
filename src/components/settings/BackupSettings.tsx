@@ -7,37 +7,42 @@ const appVersion = import.meta.env.VITE_APP_VERSION || "0.0.0";
 export default function BackupSettings() {
   const { admin, roomId } = useRoom();
   const [exporting, setExporting] = useState(false);
-  const [hint, setHint] = useState("메모, 달력, 기본 정보를 안전하게 내보낼 수 있어요.");
+  const [hint, setHint] = useState("메모와 달력, 우리 공간의 기본 정보를 한 번에 간직할 수 있어요.");
 
   const handleExport = async () => {
     if (!admin || !roomId) return;
     setExporting(true);
-    setHint("백업 파일을 준비하는 중...");
+    setHint("우리의 기록을 정리하는 중이에요...");
     try {
       const backup = await exportRoomBackup(roomId);
       downloadJson(`couple-room-${roomId}-backup.json`, backup);
-      setHint("백업 파일을 저장했어요.");
+      setHint("기록 파일을 안전하게 준비했어요.");
     } catch {
-      setHint("백업을 만들지 못했어요. Firebase 연결을 확인해주세요.");
+      setHint("기록을 내보내지 못했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setExporting(false);
     }
   };
 
   return (
-    <article className="card appInfoCard" aria-label="앱 정보">
-      <div className="card__title">백업 / 앱 정보</div>
-      <div className="row">
-        <button className="btn btn--soft" type="button" onClick={handleExport} disabled={!admin || !roomId || exporting}>
-          {exporting ? "내보내는 중..." : "백업 내보내기"}
-        </button>
-        <span className="promptForm__hint">{hint}</span>
+    <article className="card appInfoCard backupCard" aria-label="기록 보관">
+      <div className="backupCard__head">
+        <span className="backupCard__icon" aria-hidden="true">♡</span>
+        <div>
+          <div className="card__title">기록 보관</div>
+          <p className="hint">소중한 기록을 파일로 따로 보관해둘 수 있어요.</p>
+        </div>
       </div>
+      <button className="backupCard__button" type="button" onClick={handleExport} disabled={!admin || !roomId || exporting}>
+        <span className="backupCard__buttonIcon" aria-hidden="true">↓</span>
+        <span>{exporting ? "기록을 준비하는 중..." : "우리 기록 내보내기"}</span>
+      </button>
+      <p className="backupCard__hint">{hint}</p>
       <div className="appInfoCard__row">
-        <span>버전</span>
+        <span>앱 버전</span>
         <strong>v{appVersion}</strong>
       </div>
-      <p className="hint">설치 후에도 새 버전이 준비되면 앱 안에서 바로 적용할 수 있어요.</p>
+      <p className="hint">새 버전이 준비되면 앱 안에서 자연스럽게 이어서 사용할 수 있어요.</p>
     </article>
   );
 }

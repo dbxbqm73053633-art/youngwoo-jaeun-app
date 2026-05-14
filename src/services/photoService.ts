@@ -1,12 +1,28 @@
 ﻿import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, updateDoc, where, type CollectionReference } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref as storageRef, uploadBytesResumable } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import { logResolvedFirestorePath, resolveRoomDocumentSegments, resolveRoomId, resolvedRoomDocumentPath, resolvedRoomPath } from "./roomService";
 import type { PhotoRecord } from "../types";
 
-const MAX_IMAGE_LONG_SIDE = 1600;
-const JPG_QUALITY = 0.86;
+const MAX_UPLOAD_BYTES = 40 * 1024 * 1024;
+const MAIN_IMAGE_LONG_SIDE = 1800;
+const THUMB_IMAGE_LONG_SIDE = 520;
+const MAIN_JPG_QUALITY = 0.86;
+const THUMB_JPG_QUALITY = 0.78;
 const DEFAULT_ALBUM = "기본앨범";
+
+export type PhotoUploadProgress = {
+  fileIndex: number;
+  fileCount: number;
+  fileName: string;
+  phase: "compressing" | "uploading" | "saving";
+  progress: number;
+};
+
+type OptimizedImageSet = {
+  main: Blob;
+  thumbnail: Blob;
+};
 
 export function photosCollection(roomId: string): CollectionReference {
   const cleanRoomId = resolveRoomId(roomId);
@@ -94,15 +110,31 @@ export async function deletePhoto(roomId: string, photoId: string) {
     } catch {
       // Existing customer records can point at missing Storage files; Firestore cleanup should still finish.
     }
+    try {
+      await deleteObject(storageRef(storage, thumbnailPathFromMainPath(path)));
+    } catch {
+      // Older records may not have a separate thumbnail file.
+    }
   }
 
   await deleteDoc(ref);
 }
 
-export async function uploadPhotoBlob(path: string, blob: Blob) {
+function uploadPhotoBlob(path: string, blob: Blob, onProgress?: (progress: number) => void) {
   const ref = storageRef(storage, path);
-  await uploadBytes(ref, blob, { contentType: "image/jpeg" });
-  return getDownloadURL(ref);
+  const task = uploadBytesResumable(ref, blob, {
+    contentType: "image/jpeg",
+    cacheControl: "public,max-age=31536000,immutable",
+  });
+
+  return new Promise<string>((resolve, reject) => {
+    task.on("state_changed", (snapshot) => {
+      const progress = snapshot.totalBytes ? snapshot.bytesTransferred / snapshot.totalBytes : 0;
+      onProgress?.(progress);
+    }, reject, async () => {
+      resolve(await getDownloadURL(ref));
+    });
+  });
 }
 
 function humanName(filename: string) {
@@ -130,9 +162,12 @@ export function formatPhotoDate(ts: number | null | undefined) {
   return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long", day: "numeric" }).format(new Date(ts));
 }
 
-export async function fileToJpegBlobCompressed(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_IMAGE_LONG_SIDE / Math.max(bitmap.width, bitmap.height));
+function thumbnailPathFromMainPath(path: string) {
+  return path.replace(/\.jpg$/i, "_thumb.jpg");
+}
+
+async function drawToJpeg(bitmap: ImageBitmap, longSide: number, quality: number): Promise<Blob> {
+  const scale = Math.min(1, longSide / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));
   const height = Math.max(1, Math.round(bitmap.height * scale));
   const canvas = document.createElement("canvas");
@@ -141,21 +176,48 @@ export async function fileToJpegBlobCompressed(file: File): Promise<Blob> {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas context unavailable");
   ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);
       else reject(new Error("Image compression failed"));
-    }, "image/jpeg", JPG_QUALITY);
+    }, "image/jpeg", quality);
   });
+}
+
+export async function fileToOptimizedJpegs(file: File): Promise<OptimizedImageSet> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Image file is too large");
+  }
+  const bitmap = await createImageBitmap(file);
+  try {
+    const [main, thumbnail] = await Promise.all([
+      drawToJpeg(bitmap, MAIN_IMAGE_LONG_SIDE, MAIN_JPG_QUALITY),
+      drawToJpeg(bitmap, THUMB_IMAGE_LONG_SIDE, THUMB_JPG_QUALITY),
+    ]);
+    return { main, thumbnail };
+  } finally {
+    bitmap.close();
+  }
 }
 
 export async function uploadPhotoFile(
   roomId: string,
   file: File,
   metadata: Pick<PhotoRecord, "album" | "caption" | "date">,
+  progress?: {
+    fileIndex: number;
+    fileCount: number;
+    onProgress?: (progress: PhotoUploadProgress) => void;
+  },
 ) {
+  progress?.onProgress?.({
+    fileIndex: progress.fileIndex,
+    fileCount: progress.fileCount,
+    fileName: file.name,
+    phase: "compressing",
+    progress: 0,
+  });
   const now = Date.now();
   const docRef = await createPhotoPlaceholder(roomId, {
     album: metadata.album,
@@ -171,11 +233,43 @@ export async function uploadPhotoFile(
     storagePath: "",
   });
   const path = `rooms/${resolveRoomId(roomId)}/photos/${docRef.id}.jpg`;
+  const thumbPath = thumbnailPathFromMainPath(path);
 
   try {
-    const blob = await fileToJpegBlobCompressed(file);
-    const url = await uploadPhotoBlob(path, blob);
-    await updateDoc(docRef, { url, thumbnailUrl: url, storagePath: path });
+    const optimized = await fileToOptimizedJpegs(file);
+    progress?.onProgress?.({
+      fileIndex: progress.fileIndex,
+      fileCount: progress.fileCount,
+      fileName: file.name,
+      phase: "uploading",
+      progress: 0,
+    });
+    const thumbUrl = await uploadPhotoBlob(thumbPath, optimized.thumbnail, (value) => {
+      progress?.onProgress?.({
+        fileIndex: progress.fileIndex,
+        fileCount: progress.fileCount,
+        fileName: file.name,
+        phase: "uploading",
+        progress: value * 0.35,
+      });
+    });
+    const url = await uploadPhotoBlob(path, optimized.main, (value) => {
+      progress?.onProgress?.({
+        fileIndex: progress.fileIndex,
+        fileCount: progress.fileCount,
+        fileName: file.name,
+        phase: "uploading",
+        progress: 0.35 + value * 0.65,
+      });
+    });
+    progress?.onProgress?.({
+      fileIndex: progress.fileIndex,
+      fileCount: progress.fileCount,
+      fileName: file.name,
+      phase: "saving",
+      progress: 1,
+    });
+    await updateDoc(docRef, { url, thumbnailUrl: thumbUrl, storagePath: path });
   } catch (error) {
     try {
       await deleteDoc(docRef);

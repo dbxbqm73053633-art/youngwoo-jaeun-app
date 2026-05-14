@@ -287,6 +287,55 @@ export async function saveRoomConfig(coupleCode: string, config: RoomConfig) {
   }, { merge: true });
 }
 
+export type RoomManagementSnapshot = {
+  coupleCode: string;
+  nameA: string;
+  nameB: string;
+  startDate: number;
+  members: Record<string, { role?: RoomRole; joinedAt?: number; createdAt?: number; provisioner?: boolean }>;
+  hasAdminPassword: boolean;
+  hasViewerPassword: boolean;
+};
+
+export async function getRoomManagementSnapshot(coupleCode: string): Promise<RoomManagementSnapshot | null> {
+  const snap = await getDoc(roomDocument(coupleCode));
+  if (!snap.exists()) return null;
+
+  const data = snap.data();
+  return {
+    coupleCode: String(data.coupleCode || coupleCode),
+    nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
+    nameB: String(data.nameB || DEFAULT_CONFIG.nameB),
+    startDate: typeof data.startDate === "number" ? data.startDate : DEFAULT_CONFIG.startDate,
+    members: (data.members || {}) as RoomManagementSnapshot["members"],
+    hasAdminPassword: Boolean(data.adminPasswordHash || data.roomPasswordHash || data.passwordHash),
+    hasViewerPassword: Boolean(data.viewerPasswordHash),
+  };
+}
+
+export async function updateRoomManagement(coupleCode: string, update: {
+  nameA: string;
+  nameB: string;
+  startDate: number;
+  adminPassword?: string;
+  viewerPassword?: string;
+}) {
+  const patch: Record<string, unknown> = {
+    coupleCode: resolveRoomId(coupleCode),
+    nameA: update.nameA,
+    nameB: update.nameB,
+    startDate: update.startDate,
+    updatedAt: Date.now(),
+  };
+
+  const adminPassword = update.adminPassword?.trim();
+  const viewerPassword = update.viewerPassword?.trim();
+  if (adminPassword) patch.adminPasswordHash = await hashRoomPassword(adminPassword);
+  if (viewerPassword) patch.viewerPasswordHash = await hashRoomPassword(viewerPassword);
+
+  await setDoc(roomDocument(coupleCode), patch, { merge: true });
+}
+
 function randomToken(length: number) {
   const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
   const bytes = new Uint8Array(length);

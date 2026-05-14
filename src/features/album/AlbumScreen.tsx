@@ -4,9 +4,10 @@ import { memo } from "react";
 import { createPortal } from "react-dom";
 import PhotoGrid from "../../components/album/PhotoGrid";
 import { useConfirm } from "../../components/layout/ModalProvider";
+import { ALBUM_ATMOSPHERE_QUOTES, REPLAY_MEMORY_CAPTIONS } from "../../constants/emotionalCopy";
 import { useRoom } from "../../contexts/RoomContext";
 import { usePhotos, type PhotoSortMode } from "../../hooks/usePhotos";
-import { formatPhotoDate, fromISODateInputValue, toISODateInputValue } from "../../services/photoService";
+import { formatPhotoDate, fromISODateInputValue, toISODateInputValue, type PhotoUploadProgress } from "../../services/photoService";
 import type { PhotoRecord } from "../../types";
 
 const PhotoModal = lazy(() => import("../../components/album/PhotoModal"));
@@ -22,13 +23,22 @@ function normalizeAlbum(value: string) {
 type PhotoUploadPanelProps = {
   disabled?: boolean;
   onUpload: (files: File[], metadata: Pick<PhotoRecord, "album" | "caption" | "date">) => Promise<void>;
+  progress?: PhotoUploadProgress | null;
   uploading?: boolean;
 };
 
-const PhotoUploadPanel = memo(function PhotoUploadPanel({ disabled = false, onUpload, uploading = false }: PhotoUploadPanelProps) {
+const PhotoUploadPanel = memo(function PhotoUploadPanel({ disabled = false, onUpload, progress = null, uploading = false }: PhotoUploadPanelProps) {
   const [album, setAlbum] = useState("");
   const [date, setDate] = useState(() => toISODateInputValue(new Date()));
   const [caption, setCaption] = useState("");
+  const progressPercent = progress ? Math.round(progress.progress * 100) : 0;
+  const progressText = progress
+    ? progress.phase === "compressing"
+      ? `사진을 가볍게 정리하는 중... ${progress.fileIndex}/${progress.fileCount}`
+      : progress.phase === "saving"
+        ? `앨범에 저장하는 중... ${progress.fileIndex}/${progress.fileCount}`
+        : `업로드 중... ${progress.fileIndex}/${progress.fileCount} · ${progressPercent}%`
+    : "";
 
   const handleFiles = async (files: FileList | null) => {
     const list = [...(files || [])];
@@ -67,6 +77,16 @@ const PhotoUploadPanel = memo(function PhotoUploadPanel({ disabled = false, onUp
           <span className="dot" />
           <span>{disabled ? "입장 후 사진을 업로드할 수 있어요" : "업로드하면 앨범에 저장되고 재생 모드에도 바로 반영돼요"}</span>
         </div>
+        {uploading ? (
+          <div className="uploadProgress" role="status" aria-live="polite">
+            <div className="uploadProgress__top">
+              <span>{progressText || "사진을 준비하는 중..."}</span>
+              <strong>{progressPercent}%</strong>
+            </div>
+            <div className="uploadProgress__bar" aria-hidden="true"><span style={{ width: `${progressPercent}%` }} /></div>
+            <p>모바일에서도 빠르게 열리도록 사진을 최적화하고 있어요.</p>
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -75,25 +95,61 @@ const PhotoUploadPanel = memo(function PhotoUploadPanel({ disabled = false, onUp
 function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: () => void }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [slideProgress, setSlideProgress] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const startedAt = useMemo(() => ({ current: performance.now() }), []);
+  const touchStartX = useMemo(() => ({ current: null as number | null }), []);
+  const slideMs = 5200;
   const current = photos[index] ?? null;
-  const progress = photos.length ? ((index + 1) / photos.length) * 100 : 0;
+  const progress = photos.length ? ((index + slideProgress) / photos.length) * 100 : 0;
+
+  const goNext = useCallback(() => {
+    startedAt.current = performance.now();
+    setSlideProgress(0);
+    setIndex((currentIndex) => (currentIndex + 1) % photos.length);
+  }, [photos.length, startedAt]);
+
+  const goPrev = useCallback(() => {
+    startedAt.current = performance.now();
+    setSlideProgress(0);
+    setIndex((currentIndex) => (currentIndex - 1 + photos.length) % photos.length);
+  }, [photos.length, startedAt]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.classList.add("replay-open");
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
     return () => {
+      document.body.classList.remove("replay-open");
       document.body.style.overflow = previousOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     };
   }, []);
 
   useEffect(() => {
     if (!playing || photos.length <= 1) return;
-    const timer = window.setTimeout(() => setIndex((currentIndex) => (currentIndex + 1) % photos.length), 4200);
-    return () => window.clearTimeout(timer);
-  }, [index, photos.length, playing]);
+    let frame = 0;
+    const tick = (now: number) => {
+      const nextProgress = Math.min(1, (now - startedAt.current) / slideMs);
+      setSlideProgress(nextProgress);
+      if (nextProgress >= 1) {
+        startedAt.current = now;
+        setSlideProgress(0);
+        setIndex((currentIndex) => (currentIndex + 1) % photos.length);
+      }
+      frame = window.requestAnimationFrame(tick);
+    };
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [photos.length, playing, startedAt]);
+
+  useEffect(() => {
+    startedAt.current = performance.now();
+    setSlideProgress(0);
+  }, [index, startedAt]);
 
   useEffect(() => {
     if (!photos.length) return;
@@ -115,8 +171,8 @@ function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: ()
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
-      if (event.key === "ArrowRight") setIndex((currentIndex) => (currentIndex + 1) % photos.length);
-      if (event.key === "ArrowLeft") setIndex((currentIndex) => (currentIndex - 1 + photos.length) % photos.length);
+      if (event.key === "ArrowRight") goNext();
+      if (event.key === "ArrowLeft") goPrev();
       if (event.key === " ") {
         event.preventDefault();
         setPlaying((value) => !value);
@@ -124,25 +180,59 @@ function ReplayOverlay({ photos, onClose }: { photos: PhotoRecord[]; onClose: ()
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, photos.length]);
+  }, [goNext, goPrev, onClose]);
+
+  const handleReplayTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleReplayTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return;
+    const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
+    const delta = endX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 48) return;
+    if (delta > 0) goPrev();
+    else goNext();
+  };
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        setFullscreen(false);
+      } else {
+        await document.documentElement.requestFullscreen();
+        setFullscreen(true);
+      }
+    } catch {
+      setFullscreen((value) => !value);
+    }
+  };
 
   if (!current) return null;
 
+  const replayCaption = current.memo?.trim() || REPLAY_MEMORY_CAPTIONS[index % REPLAY_MEMORY_CAPTIONS.length];
+
   const replayLayer = (
-    <div className="replay" role="dialog" aria-modal="true" aria-label="추억 재생하기">
+    <div className={`replay${playing ? " replay--playing" : " replay--paused"}${fullscreen ? " replay--fullscreen" : ""}`} role="dialog" aria-modal="true" aria-label="추억 재생하기" onTouchStart={handleReplayTouchStart} onTouchEnd={handleReplayTouchEnd}>
       <div className="replay__progress"><span style={{ width: `${progress}%` }} /></div>
       <button className="replay__close iconBtn" type="button" aria-label="닫기" onClick={onClose}>×</button>
-      <button className="replay__nav replay__nav--prev" type="button" aria-label="이전 사진" onClick={() => setIndex((currentIndex) => (currentIndex - 1 + photos.length) % photos.length)}>‹</button>
-      <button className="replay__nav replay__nav--next" type="button" aria-label="다음 사진" onClick={() => setIndex((currentIndex) => (currentIndex + 1) % photos.length)}>›</button>
+      <button className="replay__fullscreen" type="button" aria-label="전체 화면" onClick={() => void toggleFullscreen()}>{fullscreen ? "화면 줄이기" : "전체 화면"}</button>
+      <button className="replay__nav replay__nav--prev" type="button" aria-label="이전 사진" onClick={goPrev}>‹</button>
+      <button className="replay__nav replay__nav--next" type="button" aria-label="다음 사진" onClick={goNext}>›</button>
       <div className="replay__stage" key={current.id || current.url}>
         <img src={current.url} alt={current.caption || "추억 사진"} decoding="async" fetchpriority="high" />
       </div>
       <div className="replay__caption">
         <span>{current.album} · {formatPhotoDate(current.date)}</span>
         <strong>{current.caption || "함께 남긴 소중한 순간"}</strong>
-        {current.memo ? <p>{current.memo}</p> : <p>이 장면도 우리에게 오래 남을 거예요.</p>}
+        <p className="replay__memoryLine">{replayCaption}</p>
       </div>
-      <button className="replay__play btn btn--soft" type="button" onClick={() => setPlaying((value) => !value)}>{playing ? "잠시 멈추기" : "다시 재생"}</button>
+      <div className="replay__controls">
+        <button className="replay__play" type="button" onClick={() => setPlaying((value) => !value)}>{playing ? "잠시 멈추기" : "다시 재생"}</button>
+        <button className="replay__restart" type="button" onClick={() => { startedAt.current = performance.now(); setSlideProgress(0); setIndex(0); setPlaying(true); }}>처음부터</button>
+      </div>
     </div>
   );
 
@@ -174,6 +264,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
   } = usePhotos(roomId, 18, role);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const [managementMode, setManagementMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [replayOpen, setReplayOpen] = useState(false);
@@ -191,12 +282,17 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
       return;
     }
     setUploading(true);
+    setUploadProgress(null);
     try {
-      await uploadPhotos(files, metadata);
-    } catch {
-      setActionError("사진 업로드에 실패했어요. 네트워크와 Firebase Storage 권한을 확인해주세요.");
+      await uploadPhotos(files, metadata, setUploadProgress);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "";
+      setActionError(message === "Image file is too large"
+        ? "사진 용량이 너무 커요. 조금 더 작은 사진으로 다시 올려주세요."
+        : "사진 업로드에 실패했어요. 네트워크와 Firebase Storage 권한을 확인해주세요.");
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   }, [admin, roomId, unlocked, uploadPhotos]);
 
@@ -321,13 +417,14 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
           </div>
         </div>
 
-        {admin ? <PhotoUploadPanel disabled={!unlocked} onUpload={handleUpload} uploading={uploading} /> : null}
+        {admin ? <PhotoUploadPanel disabled={!unlocked} onUpload={handleUpload} progress={uploadProgress} uploading={uploading} /> : null}
 
         <article className="card albumGalleryCard">
           <div className="albumGalleryCard__head">
             <div>
               <div className="card__title">우리 앨범 <span className="count" id="photoCount">{photos.length}</span></div>
               <p className="hint">대표사진, 메모, 정렬까지 이곳에서 관리할 수 있어요.</p>
+              <p className="emotionalQuote albumAtmosphere">{ALBUM_ATMOSPHERE_QUOTES[photos.length % ALBUM_ATMOSPHERE_QUOTES.length]}</p>
             </div>
           </div>
           {loading ? <p className="hint loadingHint">사진을 불러오는 중...</p> : null}

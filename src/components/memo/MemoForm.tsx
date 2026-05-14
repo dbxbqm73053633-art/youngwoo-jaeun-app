@@ -4,6 +4,15 @@ import { useMemos } from "../../hooks/useMemos";
 import { useConfirm } from "../layout/ModalProvider";
 import MemoToolbar from "./MemoToolbar";
 
+const MEMO_PERMISSION_ERROR = "저장 권한이 없습니다. 관리자 로그인 상태를 확인해주세요.";
+
+function isPermissionError(caught: unknown) {
+  const error = caught as { code?: unknown; message?: unknown };
+  const code = typeof error?.code === "string" ? error.code : "";
+  const message = typeof error?.message === "string" ? error.message : "";
+  return code === "permission-denied" || message.toLowerCase().includes("permission");
+}
+
 export default function MemoForm() {
   const { admin, role, roomId, unlocked } = useRoom();
   const { createMemo, removeAllMemos } = useMemos(roomId, role);
@@ -29,8 +38,9 @@ export default function MemoForm() {
       await createMemo(title.trim(), body.trim());
       setTitle("");
       setBody("");
-    } catch {
-      setError("메모 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } catch (caught) {
+      console.error("Memo save failed", caught);
+      setError(isPermissionError(caught) ? MEMO_PERMISSION_ERROR : "메모 저장에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setSaving(false);
     }
@@ -47,8 +57,9 @@ export default function MemoForm() {
     setSaving(true);
     try {
       await removeAllMemos();
-    } catch {
-      setError("메모 삭제에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } catch (caught) {
+      console.error("Memo clear failed", caught);
+      setError(isPermissionError(caught) ? MEMO_PERMISSION_ERROR : "메모 삭제에 실패했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setSaving(false);
     }

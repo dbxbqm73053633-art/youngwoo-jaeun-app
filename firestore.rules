@@ -36,7 +36,9 @@ service cloud.firestore {
 
     function isSystemAdmin() {
       return signedIn()
-        && exists(/databases/$(database)/documents/systemAdmins/$(request.auth.uid));
+        && exists(/databases/$(database)/documents/systemAdmins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)).data.role == 'owner';
     }
 
     function isValidRoomRole(role) {
@@ -102,6 +104,22 @@ service cloud.firestore {
         && !('password' in request.resource.data);
     }
 
+    function isSystemAdminRoomManagement(coupleCode) {
+      return isSystemAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'coupleCode',
+          'nameA',
+          'nameB',
+          'startDate',
+          'adminPasswordHash',
+          'viewerPasswordHash',
+          'updatedAt'
+        ])
+        && request.resource.data.coupleCode == coupleCode
+        && (!('adminPasswordHash' in request.resource.data) || request.resource.data.adminPasswordHash is string)
+        && (!('viewerPasswordHash' in request.resource.data) || request.resource.data.viewerPasswordHash is string);
+    }
+
     match /rooms/{coupleCode} {
       allow get: if signedIn();
       allow list: if false;
@@ -113,7 +131,8 @@ service cloud.firestore {
       allow update: if (isRoomAdmin(coupleCode)
         && protectedRoomKeysUnchanged(coupleCode))
         || isSelfMemberBootstrap()
-        || isLegacyPasswordMigration(coupleCode);
+        || isLegacyPasswordMigration(coupleCode)
+        || isSystemAdminRoomManagement(coupleCode);
       allow delete: if false;
 
       match /photos/{photoId} {

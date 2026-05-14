@@ -10,7 +10,8 @@ const ROLE_KEY = "ywjy_room_role_v1";
 const CONFIGURED_COUPLE_CODE = String(import.meta.env.VITE_COUPLE_CODE || "").trim();
 const ROOM_PASSWORD = String(import.meta.env.VITE_ROOM_PASSWORD || "").trim();
 const initialUnlocked = sessionStorage.getItem(SESSION_KEY) === "1";
-const initialRole = (sessionStorage.getItem(ROLE_KEY) === "viewer" ? "viewer" : "admin") as RoomRole;
+const storedRole = sessionStorage.getItem(ROLE_KEY);
+const initialRole = (storedRole === "admin" ? "admin" : "viewer") as RoomRole;
 
 type UnlockResult =
   | { ok: true }
@@ -203,9 +204,18 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     setLoading(true);
     void ensureAuth()
-      .then(() => isCurrentUserSystemAdmin())
-      .then((nextSystemAdmin) => {
-        if (!cancelled) setSystemAdmin(nextSystemAdmin);
+      .then(async (user) => {
+        const [nextSystemAdmin, memberRole] = await Promise.all([
+          isCurrentUserSystemAdmin(),
+          user?.uid ? getExistingRoomMemberRole(coupleCode, user.uid).catch(() => null) : Promise.resolve(null),
+        ]);
+        const verifiedRole = memberRole || "viewer";
+        if (!cancelled) {
+          setSystemAdmin(nextSystemAdmin);
+          setRole(verifiedRole);
+          setAdmin(verifiedRole === "admin");
+          sessionStorage.setItem(ROLE_KEY, verifiedRole);
+        }
       })
       .then(() => getExistingRoomConfig(coupleCode))
       .then((config) => {
@@ -218,12 +228,14 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           setRole(null);
           setUnlocked(false);
           setAdmin(false);
+          setSystemAdmin(false);
           return;
         }
         setCouple(config);
       })
       .catch((caught) => {
         if (cancelled) return;
+        setSystemAdmin(false);
         setError(caught instanceof Error ? caught : new Error(String(caught)));
       })
       .finally(() => {

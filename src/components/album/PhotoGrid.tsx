@@ -1,4 +1,5 @@
 ﻿import { memo } from "react";
+import { ALBUM_EMPTY_LINES } from "../../constants/emotionalCopy";
 import type { PhotoRecord } from "../../types";
 import PhotoCard from "./PhotoCard";
 
@@ -62,7 +63,8 @@ function PhotoGrid({
         ) : (
           <div className="albumEmpty emptyState">
             <strong>아직 사진이 없어요</strong>
-            <span>위의 사진 추가 버튼으로 첫 장면을 올리면 앨범과 슬라이드가 자동으로 채워져요.</span>
+            <span>{ALBUM_EMPTY_LINES[0]}</span>
+            <small>{ALBUM_EMPTY_LINES[1]}</small>
           </div>
         )}
       </div>
