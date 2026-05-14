@@ -1,4 +1,4 @@
-const CACHE_NAME = "ywjy-shell-v13";
+const CACHE_NAME = "ywjy-shell-v14";
 
 const SHELL = [
   "./",
@@ -44,6 +44,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
+          if (!response || !response.ok || response.type === "opaque") return response;
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
           return response;
@@ -56,6 +57,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request).then((response) => {
+        if (!response || !response.ok || response.type === "opaque") return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
         return response;

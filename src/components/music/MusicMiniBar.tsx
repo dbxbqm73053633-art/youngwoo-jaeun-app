@@ -1,6 +1,9 @@
+import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
+
 type MusicMiniBarProps = {
   currentLyric: string;
   isPlaying: boolean;
+  title?: string;
   onToggleLyrics: () => void;
   onTogglePlayback: () => void;
   onVolumeChange: (volume: number) => void;
@@ -10,6 +13,7 @@ type MusicMiniBarProps = {
 export default function MusicMiniBar({
   currentLyric,
   isPlaying,
+  title = TEMPLATE_DEFAULTS.musicTitle,
   onToggleLyrics,
   onTogglePlayback,
   onVolumeChange,
@@ -27,7 +31,7 @@ export default function MusicMiniBar({
         onClick={onTogglePlayback}
       />
 
-      <div className="music__title" id="musicTitle">사랑해 재은아</div>
+      <div className="music__title" id="musicTitle">{title}</div>
 
       <div className="music__centerLyric" id="musicLyricNow">{currentLyric}</div>
 

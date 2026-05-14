@@ -1,12 +1,22 @@
 import { FieldPath, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { ensureAuth } from "./authService";
+import { TEMPLATE_DEFAULTS, safeDate } from "../constants/templateConfig";
 import { db } from "../lib/firebase";
 import type { RoomConfig } from "../types";
 
 const DEFAULT_CONFIG: RoomConfig = {
-  nameA: "영우",
-  nameB: "재은",
-  startDate: new Date(2026, 3, 8, 0, 0, 0).getTime(),
+  nameA: TEMPLATE_DEFAULTS.coupleNameA,
+  nameB: TEMPLATE_DEFAULTS.coupleNameB,
+  startDate: safeDate(TEMPLATE_DEFAULTS.startDate),
+  appTitle: TEMPLATE_DEFAULTS.appName,
+  introText: TEMPLATE_DEFAULTS.introText,
+  theme: TEMPLATE_DEFAULTS.theme,
+  musicTitle: TEMPLATE_DEFAULTS.musicTitle,
+  musicMeta: TEMPLATE_DEFAULTS.musicMeta,
+  musicSrc: TEMPLATE_DEFAULTS.musicSrc,
+  videoTitle: TEMPLATE_DEFAULTS.videoTitle,
+  videoSrc: TEMPLATE_DEFAULTS.videoSrc,
+  posterSrc: TEMPLATE_DEFAULTS.posterSrc,
 };
 
 const ROOM_ALIASES: Record<string, string> = {
@@ -97,6 +107,25 @@ export function roomDocument(coupleCode: string) {
   return doc(db, "rooms", roomId);
 }
 
+function roomConfigFromData(data: Record<string, unknown>, coupleCode: string): RoomConfig {
+  return {
+    coupleCode: String(data.coupleCode || coupleCode),
+    nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
+    nameB: String(data.nameB || DEFAULT_CONFIG.nameB),
+    startDate: typeof data.startDate === "number" ? data.startDate : DEFAULT_CONFIG.startDate,
+    appTitle: String(data.appTitle || DEFAULT_CONFIG.appTitle),
+    introText: String(data.introText || DEFAULT_CONFIG.introText),
+    theme: String(data.theme || DEFAULT_CONFIG.theme),
+    musicTitle: String(data.musicTitle || DEFAULT_CONFIG.musicTitle),
+    musicMeta: String(data.musicMeta || DEFAULT_CONFIG.musicMeta),
+    musicSrc: String(data.musicSrc || DEFAULT_CONFIG.musicSrc),
+    videoTitle: String(data.videoTitle || DEFAULT_CONFIG.videoTitle),
+    videoSrc: String(data.videoSrc || DEFAULT_CONFIG.videoSrc),
+    posterSrc: String(data.posterSrc || DEFAULT_CONFIG.posterSrc),
+    createdAt: data.createdAt,
+  };
+}
+
 export async function ensureRoomDoc(coupleCode: string) {
   const ref = roomDocument(coupleCode);
   const snap = await getDoc(ref);
@@ -117,28 +146,14 @@ export async function getRoomConfig(coupleCode: string): Promise<RoomConfig> {
     return { ...DEFAULT_CONFIG, coupleCode };
   }
 
-  const data = snap.data();
-  return {
-    coupleCode: String(data.coupleCode || coupleCode),
-    nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
-    nameB: String(data.nameB || DEFAULT_CONFIG.nameB),
-    startDate: typeof data.startDate === "number" ? data.startDate : DEFAULT_CONFIG.startDate,
-    createdAt: data.createdAt,
-  };
+  return roomConfigFromData(snap.data(), coupleCode);
 }
 
 export async function getExistingRoomConfig(coupleCode: string): Promise<RoomConfig | null> {
   const snap = await getDoc(roomDocument(coupleCode));
   if (!snap.exists()) return null;
 
-  const data = snap.data();
-  return {
-    coupleCode: String(data.coupleCode || coupleCode),
-    nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
-    nameB: String(data.nameB || DEFAULT_CONFIG.nameB),
-    startDate: typeof data.startDate === "number" ? data.startDate : DEFAULT_CONFIG.startDate,
-    createdAt: data.createdAt,
-  };
+  return roomConfigFromData(snap.data(), coupleCode);
 }
 
 export async function getRoomLoginDebugInfo(coupleCode: string) {

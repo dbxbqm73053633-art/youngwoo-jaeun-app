@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { INTRO_QUOTES } from "../../constants/emotionalCopy";
 import { INTRO_SEEN_KEY } from "../../constants/intro";
+import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
 import { useRoom } from "../../contexts/RoomContext";
 
 type CinematicIntroProps = {
@@ -32,8 +33,8 @@ export default function CinematicIntro({ dday }: CinematicIntroProps) {
     <div className="cinematicIntro" role="dialog" aria-modal="true" aria-label="처음 시작" onClick={close}>
       <video
         className="cinematicIntro__media"
-        src="./images/영재.mp4"
-        poster="./images/영우재은.png"
+        src={couple.videoSrc || TEMPLATE_DEFAULTS.videoSrc}
+        poster={couple.posterSrc || TEMPLATE_DEFAULTS.posterSrc}
         muted
         playsInline
         autoPlay
@@ -45,7 +46,7 @@ export default function CinematicIntro({ dday }: CinematicIntroProps) {
       <div className="cinematicIntro__veil" aria-hidden="true" />
       <div className="cinematicIntro__glow" aria-hidden="true" />
       <div className="cinematicIntro__content">
-        <p className="cinematicIntro__eyebrow">우리만의 방에 오신 걸 환영해요</p>
+        <p className="cinematicIntro__eyebrow">{couple.introText || TEMPLATE_DEFAULTS.introText}</p>
         <h1 className="cinematicIntro__names">{couple.nameA} ♡ {couple.nameB}</h1>
         <div className="cinematicIntro__dday">{dday}</div>
         <div className="cinematicIntro__quotes" aria-label="인트로 문장">

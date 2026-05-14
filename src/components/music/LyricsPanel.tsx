@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
 import type { LyricTiming } from "../../services/musicService";
 import LyricLine from "./LyricLine";
 
@@ -6,10 +7,12 @@ type LyricsPanelProps = {
   activeLyricIndex: number;
   isOpen: boolean;
   lines: LyricTiming[];
+  songMeta?: string;
+  songTitle?: string;
   onClose: () => void;
 };
 
-export default function LyricsPanel({ activeLyricIndex, isOpen, lines, onClose }: LyricsPanelProps) {
+export default function LyricsPanel({ activeLyricIndex, isOpen, lines, onClose, songMeta = TEMPLATE_DEFAULTS.musicMeta, songTitle = TEMPLATE_DEFAULTS.musicTitle }: LyricsPanelProps) {
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
 
@@ -36,8 +39,8 @@ export default function LyricsPanel({ activeLyricIndex, isOpen, lines, onClose }
         <button className="lyrics__close" id="lyricsClose" type="button" aria-label="가사 닫기" onClick={onClose}>×</button>
 
         <div className="lyrics__header">
-          <div className="lyrics__song">사랑해 재은</div>
-          <div className="lyrics__meta">영우가 재은이에게</div>
+          <div className="lyrics__song">{songTitle}</div>
+          <div className="lyrics__meta">{songMeta}</div>
         </div>
 
         <div className="lyrics__body" id="lyricsBody">

@@ -1,13 +1,15 @@
 import type { RefObject } from "react";
+import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
 
 type MusicPlayerProps = {
   audioRef: RefObject<HTMLAudioElement>;
+  musicSrc?: string;
   onPause: () => void;
   onPlay: () => void;
   onSync: (currentTime: number) => void;
 };
 
-export default function MusicPlayer({ audioRef, onPause, onPlay, onSync }: MusicPlayerProps) {
+export default function MusicPlayer({ audioRef, musicSrc = TEMPLATE_DEFAULTS.musicSrc, onPause, onPlay, onSync }: MusicPlayerProps) {
   return (
     <audio
       id="bgm"
@@ -23,7 +25,7 @@ export default function MusicPlayer({ audioRef, onPause, onPlay, onSync }: Music
       onSeeked={(event) => onSync(event.currentTarget.currentTime || 0)}
       onTimeUpdate={(event) => onSync(event.currentTarget.currentTime || 0)}
     >
-      <source src="./music/재은아사랑해.mp3" type="audio/mpeg" />
+      <source src={musicSrc} type="audio/mpeg" />
     </audio>
   );
 }

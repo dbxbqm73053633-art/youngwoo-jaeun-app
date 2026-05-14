@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
+import { useRoom } from "../../contexts/RoomContext";
 
 type HeroSectionProps = {
   counter: {
@@ -8,20 +10,22 @@ type HeroSectionProps = {
 };
 
 export default function HeroSection({ counter }: HeroSectionProps) {
+  const { couple } = useRoom();
   const [mediaReady, setMediaReady] = useState(false);
+  const [subtitleA, ...subtitleRest] = TEMPLATE_DEFAULTS.heroSubtitle.split(/,\s*/);
 
   return (
     <section className="hero" aria-label="메인 영상">
       <div className={`hero__media${mediaReady ? " hero__media--ready" : " hero__media--loading"}`}>
         <video
           className="hero__video"
-          src="./images/영재.mp4"
+          src={couple.videoSrc || TEMPLATE_DEFAULTS.videoSrc}
           autoPlay
           muted
           loop
           playsInline
           preload="metadata"
-          poster="./images/영우재은.png"
+          poster={couple.posterSrc || TEMPLATE_DEFAULTS.posterSrc}
           onCanPlay={() => setMediaReady(true)}
           onLoadedData={() => setMediaReady(true)}
           onError={() => setMediaReady(true)}
@@ -30,16 +34,16 @@ export default function HeroSection({ counter }: HeroSectionProps) {
         <div className="hero__shine" aria-hidden="true" />
 
         <div className="hero__overlay">
-          <p className="hero__badge">Private Couple App</p>
+          <p className="hero__badge">{TEMPLATE_DEFAULTS.heroBadge}</p>
           <h1 className="hero__title">
-            세상에 하나뿐인 우리만의 방
+            {TEMPLATE_DEFAULTS.heroTitle}
             <br />
-            <span className="hero__titleGrad">오늘도 사랑해</span>
+            <span className="hero__titleGrad">{TEMPLATE_DEFAULTS.heroHighlight}</span>
           </h1>
           <p className="hero__sub">
-            함께한 날을 다정하게 세고,
+            {subtitleA ? `${subtitleA},` : TEMPLATE_DEFAULTS.heroSubtitle}
             <br />
-            추억과 마음을 날마다 차곡차곡 모아가게요.
+            {subtitleRest.join(", ")}
           </p>
 
           <div className="hero__chips">

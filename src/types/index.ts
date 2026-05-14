@@ -3,6 +3,15 @@
   nameA: string;
   nameB: string;
   startDate: number;
+  appTitle?: string;
+  introText?: string;
+  theme?: string;
+  musicTitle?: string;
+  musicMeta?: string;
+  musicSrc?: string;
+  videoTitle?: string;
+  videoSrc?: string;
+  posterSrc?: string;
   createdAt?: unknown;
 };
 

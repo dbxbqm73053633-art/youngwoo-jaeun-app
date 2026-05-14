@@ -13,7 +13,7 @@ type MusicScreenProps = {
 
 export default function MusicScreen({ onReady }: MusicScreenProps) {
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
-  const { unlocked } = useRoom();
+  const { couple, unlocked } = useRoom();
   const {
     activeLyricIndex,
     audioRef,
@@ -99,6 +99,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
       <MusicMiniBar
         currentLyric={currentLyric}
         isPlaying={isPlaying}
+        title={couple.musicTitle}
         onToggleLyrics={() => setIsLyricsOpen(true)}
         onTogglePlayback={() => {
           void togglePlayback().catch(() => setIsPlaying(false));
@@ -110,10 +111,13 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
         activeLyricIndex={activeLyricIndex}
         isOpen={isLyricsOpen}
         lines={lyrics}
+        songTitle={couple.musicTitle}
+        songMeta={couple.musicMeta}
         onClose={() => setIsLyricsOpen(false)}
       />
       <MusicPlayer
         audioRef={audioRef}
+        musicSrc={couple.musicSrc}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
         onSync={syncLyrics}
