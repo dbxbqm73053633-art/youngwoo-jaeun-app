@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRoom } from "../../contexts/RoomContext";
 
+const SAVED_COUPLE_CODE_KEY = "ywjy_last_couple_code_v1";
+
+function readSavedCoupleCode() {
+  return localStorage.getItem(SAVED_COUPLE_CODE_KEY)?.trim() || "";
+}
+
 export default function LockScreen() {
   const { couple, error, loading, unlock, unlocked } = useRoom();
   const configuredCoupleCode = String(import.meta.env.VITE_COUPLE_CODE || "").trim();
-  const [coupleCode, setCoupleCode] = useState(configuredCoupleCode);
+  const [hasSavedCoupleCode, setHasSavedCoupleCode] = useState(() => Boolean(readSavedCoupleCode()));
+  const [editingCoupleCode, setEditingCoupleCode] = useState(() => !readSavedCoupleCode() && !configuredCoupleCode);
+  const [coupleCode, setCoupleCode] = useState(() => readSavedCoupleCode() || configuredCoupleCode);
   const [pass, setPass] = useState("");
   const [invalid, setInvalid] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -12,8 +20,25 @@ export default function LockScreen() {
   const passInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!unlocked) (configuredCoupleCode ? passInputRef : codeInputRef).current?.focus();
-  }, [unlocked]);
+    if (!unlocked) (editingCoupleCode || !coupleCode ? codeInputRef : passInputRef).current?.focus();
+  }, [coupleCode, editingCoupleCode, unlocked]);
+
+  const handleChangeCoupleCode = () => {
+    setEditingCoupleCode(true);
+    setInvalid(false);
+    setLoginError("");
+    requestAnimationFrame(() => codeInputRef.current?.select());
+  };
+
+  const handleResetSavedCoupleCode = () => {
+    localStorage.removeItem(SAVED_COUPLE_CODE_KEY);
+    setHasSavedCoupleCode(false);
+    setEditingCoupleCode(true);
+    setCoupleCode(configuredCoupleCode);
+    setInvalid(false);
+    setLoginError("");
+    requestAnimationFrame(() => codeInputRef.current?.select());
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -21,6 +46,15 @@ export default function LockScreen() {
     try {
       const result = await unlock(coupleCode, pass);
       setInvalid(!result.ok);
+      if (result.ok) {
+        const displayCoupleCode = String(coupleCode || configuredCoupleCode).trim();
+        if (displayCoupleCode) {
+          localStorage.setItem(SAVED_COUPLE_CODE_KEY, displayCoupleCode);
+          setHasSavedCoupleCode(true);
+          setEditingCoupleCode(false);
+        }
+        return;
+      }
       if (!result.ok) {
         if (result.reason === "invalid-code") setLoginError("커플 코드를 입력해주세요.");
         if (result.reason === "missing-room") setLoginError("커플 코드를 찾을 수 없어요. 다시 확인해주세요.");
@@ -52,21 +86,26 @@ export default function LockScreen() {
 
         <form className="lock__form" onSubmit={handleSubmit}>
           <label className="lock__label" htmlFor="lockCoupleCode">커플 코드</label>
-          <input
-            ref={codeInputRef}
-            id="lockCoupleCode"
-            className="lock__input"
-            type="text"
-            autoCapitalize="none"
-            autoComplete="username"
-            value={coupleCode}
-            onChange={(event) => {
-              setCoupleCode(event.target.value);
-              setInvalid(false);
-              setLoginError("");
-            }}
-            disabled={loading || Boolean(configuredCoupleCode)}
-          />
+          <div className="lock__codeRow">
+            <input
+              ref={codeInputRef}
+              id="lockCoupleCode"
+              className="lock__input"
+              type="text"
+              autoCapitalize="none"
+              autoComplete="username"
+              value={coupleCode}
+              onChange={(event) => {
+                setCoupleCode(event.target.value);
+                setInvalid(false);
+                setLoginError("");
+              }}
+              disabled={loading || (!editingCoupleCode && Boolean(coupleCode))}
+            />
+            {!editingCoupleCode && coupleCode ? (
+              <button className="lock__miniButton" type="button" onClick={handleChangeCoupleCode} disabled={loading}>&#48320;&#44221;</button>
+            ) : null}
+          </div>
 
           <label className="lock__label" htmlFor="lockPass">비밀번호</label>
           <div className="lock__row">
@@ -91,6 +130,9 @@ export default function LockScreen() {
           <p className={`lock__hint${invalid || error || loginError ? " error" : ""}`}>
             {loginError || (invalid ? "앗, 비밀번호가 달라요. 우리만 아는 숫자 4자리예요." : "비밀번호는 숫자 4자리예요.")}
           </p>
+          {hasSavedCoupleCode && invalid ? (
+            <button className="lock__resetCode" type="button" onClick={handleResetSavedCoupleCode} disabled={loading}>&#51200;&#51109;&#46108; &#52964;&#54540; &#53076;&#46300; &#51648;&#50864;&#44592;</button>
+          ) : null}
         </form>
 
         <div className="lock__foot">Made with ♡ for two</div>
