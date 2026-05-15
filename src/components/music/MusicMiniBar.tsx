@@ -1,7 +1,9 @@
 import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
 
 type MusicMiniBarProps = {
+  artworkSrc?: string;
   currentLyric: string;
+  disabled?: boolean;
   isPlaying: boolean;
   title?: string;
   onToggleLyrics: () => void;
@@ -11,7 +13,9 @@ type MusicMiniBarProps = {
 };
 
 export default function MusicMiniBar({
+  artworkSrc,
   currentLyric,
+  disabled = false,
   isPlaying,
   title = TEMPLATE_DEFAULTS.musicTitle,
   onToggleLyrics,
@@ -21,6 +25,7 @@ export default function MusicMiniBar({
 }: MusicMiniBarProps) {
   return (
     <div className="music" aria-label="배경음악 컨트롤">
+      {artworkSrc ? <img className="music__artwork" src={artworkSrc} alt="" loading="lazy" decoding="async" /> : null}
       <button
         className="music__btn"
         id="musicToggle"
@@ -28,6 +33,7 @@ export default function MusicMiniBar({
         aria-label={isPlaying ? "배경음악 일시정지" : "배경음악 재생"}
         data-react-render="true"
         data-state={isPlaying ? "playing" : "paused"}
+        disabled={disabled}
         onClick={onTogglePlayback}
       />
 

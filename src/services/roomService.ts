@@ -2,6 +2,7 @@ import { FieldPath, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc
 import { ensureAuth } from "./authService";
 import { TEMPLATE_DEFAULTS, safeDate } from "../constants/templateConfig";
 import { db } from "../lib/firebase";
+import type { MusicTrack } from "./musicService";
 import type { RoomConfig } from "../types";
 
 const DEFAULT_CONFIG: RoomConfig = {
@@ -107,7 +108,7 @@ export function roomDocument(coupleCode: string) {
   return doc(db, "rooms", roomId);
 }
 
-function roomConfigFromData(data: Record<string, unknown>, coupleCode: string): RoomConfig {
+function roomConfigFromData(data: Record<string, unknown>, coupleCode: string): RoomConfig & { musicTracks?: MusicTrack[] } {
   return {
     coupleCode: String(data.coupleCode || coupleCode),
     nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
@@ -122,6 +123,7 @@ function roomConfigFromData(data: Record<string, unknown>, coupleCode: string): 
     videoTitle: String(data.videoTitle || DEFAULT_CONFIG.videoTitle),
     videoSrc: String(data.videoSrc || DEFAULT_CONFIG.videoSrc),
     posterSrc: String(data.posterSrc || DEFAULT_CONFIG.posterSrc),
+    ...(Array.isArray(data.musicTracks) ? { musicTracks: data.musicTracks as MusicTrack[] } : {}),
     createdAt: data.createdAt,
   };
 }

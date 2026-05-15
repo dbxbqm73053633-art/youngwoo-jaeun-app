@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLyricIndex, findDisplayLyric, type LyricTiming } from "../services/musicService";
 
-export function useMusic(lyrics: LyricTiming[] = []) {
+export function useMusic(lyrics: LyricTiming[] = [], lyricOffsetMs = 0) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.6);
   const [activeLyricIndex, setActiveLyricIndex] = useState(-1);
 
@@ -13,10 +14,21 @@ export function useMusic(lyrics: LyricTiming[] = []) {
     [activeLyricIndex, lyrics],
   );
 
+  useEffect(() => {
+    setCurrentTime(0);
+    setActiveLyricIndex(-1);
+  }, [lyrics]);
+
   const syncLyrics = useCallback((nextTime: number) => {
     setCurrentTime(nextTime);
-    setActiveLyricIndex(findActiveLyricIndex(lyrics, nextTime));
-  }, [lyrics]);
+    setActiveLyricIndex(findActiveLyricIndex(lyrics, nextTime, lyricOffsetMs));
+  }, [lyricOffsetMs, lyrics]);
+
+  const resetPosition = useCallback(() => {
+    setCurrentTime(0);
+    setActiveLyricIndex(-1);
+    if (audioRef.current) audioRef.current.currentTime = 0;
+  }, []);
 
   const play = useCallback(async () => {
     const audio = audioRef.current;
@@ -48,14 +60,28 @@ export function useMusic(lyrics: LyricTiming[] = []) {
     if (audioRef.current) audioRef.current.volume = clamped;
   }, []);
 
+  const seek = useCallback((nextTime: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const safeDuration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    const clamped = Math.max(0, Math.min(safeDuration || nextTime, nextTime));
+    audio.currentTime = clamped;
+    syncLyrics(clamped);
+  }, [syncLyrics]);
+
   return {
     audioRef,
     isPlaying,
     currentTime,
+    duration,
     volume,
     activeLyricIndex,
     currentLyric,
+    resetPosition,
+    seek,
     setIsPlaying,
+    setDuration,
     setVolume,
     syncLyrics,
     play,
