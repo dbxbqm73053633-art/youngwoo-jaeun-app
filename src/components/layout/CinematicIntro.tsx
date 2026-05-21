@@ -61,7 +61,10 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
       <div className="cinematicIntro__warmth" aria-hidden="true" />
       <div className="cinematicIntro__content">
         <div className="cinematicIntro__heroText">
-          <h1 className="cinematicIntro__title" data-text="우리만의 특별한 이야기">우리만의 특별한 이야기</h1>
+          <h1 className="cinematicIntro__title" data-text="우리만의 특별한 이야기">
+            <span>우리만의</span>
+            <span>특별한 <em>이야기</em></span>
+          </h1>
           <p className="cinematicIntro__subtitle">함께한 모든 순간이, 우리의 추억이 됩니다.</p>
         </div>
         <section className="cinematicIntro__card" aria-label="커플 정보">
@@ -74,9 +77,9 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
           <p>오늘도 사랑을 기록할게요</p>
           <div className="cinematicIntro__dots" aria-hidden="true"><i /><i /><i /></div>
           <span>우리만의 공간을 여는 중...</span>
+          <button className="cinematicIntro__skip" type="button" onClick={(event) => { event.stopPropagation(); close(); }}>건너뛰기 &gt;</button>
         </div>
       </div>
-      <button className="cinematicIntro__skip" type="button" onClick={(event) => { event.stopPropagation(); close(); }}>건너뛰기</button>
     </div>
   );
 }

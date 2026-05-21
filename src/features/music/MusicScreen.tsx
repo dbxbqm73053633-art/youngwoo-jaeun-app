@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildDefaultMusicTracks } from "../../data/musicTracks";
 import { useMusic } from "../../hooks/useMusic";
 import LyricsPanel from "../../components/music/LyricsPanel";
@@ -15,9 +15,11 @@ type MusicScreenProps = {
 export default function MusicScreen({ onReady }: MusicScreenProps) {
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const shouldAutoPlayNextRef = useRef(false);
   const { couple, unlocked } = useRoom();
   const tracks = useMemo(() => buildDefaultMusicTracks(couple), [couple]);
   const currentTrack = tracks[currentTrackIndex] || tracks[0];
+  const trackPosition = tracks.length > 0 ? `${currentTrackIndex + 1}/${tracks.length}` : "";
   const [currentLyrics, setCurrentLyrics] = useState(currentTrack?.lyrics || []);
   const hasAudio = Boolean(currentTrack?.audioSrc);
   const {
@@ -81,14 +83,17 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const shouldResume = !audio.paused && hasAudio;
+    const shouldResume = (shouldAutoPlayNextRef.current || !audio.paused) && hasAudio;
+    shouldAutoPlayNextRef.current = false;
     audio.pause();
     audio.load();
     resetPosition();
     setDuration(currentTrack?.duration || 0);
 
     if (shouldResume) {
-      void audio.play().catch(() => setIsPlaying(false));
+      void audio.play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
     } else {
       setIsPlaying(false);
     }
@@ -96,12 +101,22 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
 
   const selectTrack = (trackId: string) => {
     const nextIndex = tracks.findIndex((track) => track.id === trackId);
-    if (nextIndex >= 0) setCurrentTrackIndex(nextIndex);
+    if (nextIndex >= 0) {
+      shouldAutoPlayNextRef.current = isPlaying;
+      setCurrentTrackIndex(nextIndex);
+    }
   };
 
-  const playTrackOffset = (offset: number) => {
+  const playTrackOffset = (offset: number, autoplay = isPlaying) => {
     if (tracks.length <= 1) return;
+    shouldAutoPlayNextRef.current = autoplay;
     setCurrentTrackIndex((index) => (index + offset + tracks.length) % tracks.length);
+  };
+
+  const handleTrackEnded = () => {
+    setIsPlaying(false);
+    if (tracks.length <= 1) return;
+    playTrackOffset(1, true);
   };
 
   useEffect(() => {
@@ -173,16 +188,21 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
       <MusicMiniBar
         artworkSrc={currentTrack?.artworkSrc || couple.posterSrc}
         currentLyric={currentLyric}
+        currentTime={currentTime}
         disabled={!hasAudio}
+        duration={duration}
         isPlaying={isPlaying}
+        subtitle={currentTrack?.subtitle}
+        trackPosition={trackPosition}
         title={currentTrack?.title}
+        onNextTrack={tracks.length > 1 ? () => playTrackOffset(1) : undefined}
+        onPreviousTrack={tracks.length > 1 ? () => playTrackOffset(-1) : undefined}
+        onSeek={seek}
         onToggleLyrics={() => setIsLyricsOpen(true)}
         onTogglePlayback={() => {
           if (!hasAudio) return;
           void togglePlayback().catch(() => setIsPlaying(false));
         }}
-        onVolumeChange={setVolume}
-        volume={volume}
       />
       <LyricsPanel
         activeLyricIndex={activeLyricIndex}
@@ -210,6 +230,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
         audioRef={audioRef}
         musicSrc={currentTrack?.audioSrc}
         onDurationChange={setDuration}
+        onEnded={handleTrackEnded}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
         onSync={syncLyrics}

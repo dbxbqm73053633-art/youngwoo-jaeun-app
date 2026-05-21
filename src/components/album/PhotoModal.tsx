@@ -160,31 +160,59 @@ export default function PhotoModal({ photo, photos = [], currentIndex = 0, edita
     return `${baseName}.jpg`;
   };
 
+  const isFirebaseStorageUrl = (url: string) => {
+    try {
+      const host = new URL(url).hostname;
+      return host === "firebasestorage.googleapis.com" || host.endsWith(".firebasestorage.app") || host === "storage.googleapis.com";
+    } catch {
+      return false;
+    }
+  };
+
+  const triggerAnchorDownload = (url: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = downloadFileName();
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const openImageFallback = (url: string) => {
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.assign(url);
+    }
+  };
+
   const handleDownload = async () => {
     if (!photo) return;
     setDownloading(true);
     setDownloadStatus("idle");
     setHint("다운로드 중...");
     try {
+      if (isFirebaseStorageUrl(photo.url)) {
+        triggerAnchorDownload(photo.url);
+        setDownloadStatus("error");
+        setHint("길게 눌러 이미지를 저장할 수 있어요");
+        return;
+      }
+
       const response = await fetch(photo.url, { mode: "cors", credentials: "omit" });
       if (!response.ok) throw new Error("Image fetch failed");
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = downloadFileName();
-      link.rel = "noopener";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      triggerAnchorDownload(objectUrl);
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       setDownloadStatus("success");
       setHint("다운로드를 시작했어요.");
     } catch {
       setDownloadStatus("error");
-      setHint("다운로드가 막혀 새 창으로 열었어요.");
-      window.open(photo.url, "_blank", "noopener,noreferrer");
+      setHint("길게 눌러 이미지를 저장할 수 있어요");
+      openImageFallback(photo.url);
     } finally {
       setDownloading(false);
       window.setTimeout(() => setDownloadStatus("idle"), 2400);

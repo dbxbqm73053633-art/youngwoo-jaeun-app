@@ -5,19 +5,20 @@ type MusicPlayerProps = {
   audioRef: RefObject<HTMLAudioElement>;
   musicSrc?: string;
   onDurationChange?: (duration: number) => void;
+  onEnded: () => void;
   onPause: () => void;
   onPlay: () => void;
   onSync: (currentTime: number) => void;
 };
 
-export default function MusicPlayer({ audioRef, musicSrc = TEMPLATE_DEFAULTS.musicSrc, onDurationChange, onPause, onPlay, onSync }: MusicPlayerProps) {
+export default function MusicPlayer({ audioRef, musicSrc = TEMPLATE_DEFAULTS.musicSrc, onDurationChange, onEnded, onPause, onPlay, onSync }: MusicPlayerProps) {
   return (
     <audio
       id="bgm"
       preload="metadata"
-      loop
       ref={audioRef}
       data-react-render="true"
+      onEnded={onEnded}
       onPause={onPause}
       onLoadedMetadata={(event) => onDurationChange?.(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
       onPlay={(event) => {
