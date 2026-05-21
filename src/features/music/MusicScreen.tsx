@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildDefaultMusicTracks } from "../../data/musicTracks";
 import { useMusic } from "../../hooks/useMusic";
 import LyricsPanel from "../../components/music/LyricsPanel";
@@ -12,8 +12,11 @@ type MusicScreenProps = {
   onReady?: () => void;
 };
 
+const DEFAULT_MUSIC_VOLUME = 0.5;
+
 export default function MusicScreen({ onReady }: MusicScreenProps) {
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
+  const [needsGestureToPlay, setNeedsGestureToPlay] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const shouldAutoPlayNextRef = useRef(false);
   const { couple, unlocked } = useRoom();
@@ -39,6 +42,15 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     togglePlayback,
     volume,
   } = useMusic(currentLyrics, currentTrack?.lyricOffsetMs || 0);
+
+  const primeAudioVolume = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.muted = false;
+      audio.volume = DEFAULT_MUSIC_VOLUME;
+    }
+    setVolume(DEFAULT_MUSIC_VOLUME, true);
+  }, [audioRef, setVolume]);
 
   useEffect(() => {
     onReady?.();
@@ -91,13 +103,18 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     setDuration(currentTrack?.duration || 0);
 
     if (shouldResume) {
+      primeAudioVolume();
       void audio.play()
         .then(() => setIsPlaying(true))
-        .catch(() => setIsPlaying(false));
+        .catch((error) => {
+          console.info("Background music needs a user gesture before it can play.", error);
+          setNeedsGestureToPlay(true);
+          setIsPlaying(false);
+        });
     } else {
       setIsPlaying(false);
     }
-  }, [audioRef, currentTrack?.audioSrc, currentTrack?.duration, hasAudio, resetPosition, setDuration, setIsPlaying]);
+  }, [audioRef, currentTrack?.audioSrc, currentTrack?.duration, hasAudio, primeAudioVolume, resetPosition, setDuration, setIsPlaying]);
 
   const selectTrack = (trackId: string) => {
     const nextIndex = tracks.findIndex((track) => track.id === trackId);
@@ -123,33 +140,20 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     if (!unlocked) return;
 
     let handledGesture = false;
-    const shouldFadeIn = sessionStorage.getItem(INTRO_PENDING_KEY) === "1" || sessionStorage.getItem(INTRO_SEEN_KEY) !== "1";
-    const targetVolume = volume;
-    let fadeFrame = 0;
-
-    const fadeInMusic = () => {
-      if (!shouldFadeIn) return;
-      const startedAt = performance.now();
-      const duration = 2600;
-      const tick = (now: number) => {
-        const progress = Math.min(1, (now - startedAt) / duration);
-        setVolume(targetVolume * progress, false);
-        if (progress < 1) fadeFrame = window.requestAnimationFrame(tick);
-      };
-      setVolume(0, false);
-      fadeFrame = window.requestAnimationFrame(tick);
-    };
+    const shouldStartWithIntro = sessionStorage.getItem(INTRO_PENDING_KEY) === "1" || sessionStorage.getItem(INTRO_SEEN_KEY) !== "1";
 
     const tryPlay = async () => {
       if (!hasAudio) return false;
+      primeAudioVolume();
       if (!audioRef.current?.paused) return true;
       try {
-        if (shouldFadeIn) setVolume(0, false);
         await play();
-        fadeInMusic();
+        setNeedsGestureToPlay(false);
         return true;
-      } catch {
+      } catch (error) {
+        console.info("Background music autoplay was blocked; waiting for user gesture.", error);
         setIsPlaying(false);
+        setNeedsGestureToPlay(true);
         return false;
       }
     };
@@ -174,17 +178,33 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     };
 
     void tryPlay().then((started) => {
-      if (!started) addGestureListeners();
+      if (!started || shouldStartWithIntro) addGestureListeners();
     });
 
     return () => {
       removeGestureListeners();
-      if (fadeFrame) window.cancelAnimationFrame(fadeFrame);
     };
-  }, [audioRef, hasAudio, play, setIsPlaying, setVolume, unlocked, volume]);
+  }, [audioRef, hasAudio, play, primeAudioVolume, setIsPlaying, unlocked]);
+
+  const handleGesturePlay = () => {
+    if (!hasAudio) return;
+    primeAudioVolume();
+    void play().then(() => {
+      setNeedsGestureToPlay(false);
+    }).catch((error) => {
+      console.info("Background music still needs a user gesture before it can play.", error);
+      setIsPlaying(false);
+      setNeedsGestureToPlay(true);
+    });
+  };
 
   return (
     <>
+      {needsGestureToPlay ? (
+        <button className="musicStartPrompt" type="button" onClick={handleGesturePlay}>
+          터치해서 음악 시작
+        </button>
+      ) : null}
       <MusicMiniBar
         artworkSrc={currentTrack?.artworkSrc || couple.posterSrc}
         currentLyric={currentLyric}

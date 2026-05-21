@@ -2,14 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLyricIndex, findDisplayLyric, type LyricTiming } from "../services/musicService";
 
 const MUSIC_VOLUME_KEY = "coupleMusicVolume";
+const MUSIC_MUTED_KEYS = ["coupleMusicMuted", "musicMuted", "bgmMuted"];
 const DEFAULT_VOLUME = 0.5;
 
 function readSavedVolume() {
   if (typeof window === "undefined") return DEFAULT_VOLUME;
+  for (const key of MUSIC_MUTED_KEYS) {
+    const savedMuted = window.localStorage.getItem(key);
+    if (savedMuted === "true" || savedMuted === "1") {
+      window.localStorage.removeItem(key);
+      window.localStorage.setItem(MUSIC_VOLUME_KEY, String(DEFAULT_VOLUME));
+      return DEFAULT_VOLUME;
+    }
+  }
   const saved = window.localStorage.getItem(MUSIC_VOLUME_KEY);
   if (saved === null) return DEFAULT_VOLUME;
   const parsed = Number(saved);
-  return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : DEFAULT_VOLUME;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    window.localStorage.setItem(MUSIC_VOLUME_KEY, String(DEFAULT_VOLUME));
+    return DEFAULT_VOLUME;
+  }
+  return Math.max(0, Math.min(1, parsed));
 }
 
 export function useMusic(lyrics: LyricTiming[] = [], lyricOffsetMs = 0) {
