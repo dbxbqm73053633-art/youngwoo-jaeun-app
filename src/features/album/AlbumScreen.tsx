@@ -463,7 +463,7 @@ export default function AlbumScreen({ onReady }: AlbumScreenProps) {
 
       {lightboxPhoto ? (
         <Suspense fallback={null}>
-          <PhotoModal photo={lightboxPhoto} editable={admin} onClose={() => setLightboxIndex(null)} onNext={showNext} onPrev={showPrev} onDelete={handleDeletePhoto} onSetCover={handleSetCover} onSave={handleSaveLightbox} />
+          <PhotoModal photo={lightboxPhoto} photos={visiblePhotos} currentIndex={lightboxIndex ?? 0} editable={admin} onClose={() => setLightboxIndex(null)} onNext={showNext} onPrev={showPrev} onSelectIndex={setLightboxIndex} onDelete={handleDeletePhoto} onSetCover={handleSetCover} onSave={handleSaveLightbox} />
         </Suspense>
       ) : null}
 

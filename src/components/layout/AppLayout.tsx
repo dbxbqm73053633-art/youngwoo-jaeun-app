@@ -14,10 +14,11 @@ type AppLayoutProps = {
   activeTab: AppTab;
   dday: string;
   children: ReactNode;
+  onIntroComplete?: () => void;
   onTabChange: (tab: AppTab) => void;
 };
 
-export default function AppLayout({ activeTab, children, dday, onTabChange }: AppLayoutProps) {
+export default function AppLayout({ activeTab, children, dday, onIntroComplete, onTabChange }: AppLayoutProps) {
   const { couple } = useRoom();
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function AppLayout({ activeTab, children, dday, onTabChange }: Ap
     <>
       <div className="bg" aria-hidden="true" />
       <LockScreen />
-      <CinematicIntro dday={dday} />
+      <CinematicIntro onComplete={onIntroComplete} />
       <OnboardingGuide />
       <InstallBanner />
 

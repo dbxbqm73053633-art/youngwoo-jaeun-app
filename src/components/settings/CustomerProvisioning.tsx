@@ -42,6 +42,34 @@ function memberSummary(snapshot: RoomManagementSnapshot | null) {
   }, { admins: 0, viewers: 0 });
 }
 
+function formatCount(value: number | null) {
+  return typeof value === "number" ? `${value.toLocaleString("ko-KR")}개` : "-";
+}
+
+function formatUpdatedAt(value: number | null) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function roomStatusLabel(status?: string) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (["test", "testing", "테스트"].includes(normalized)) return "테스트";
+  if (["inactive", "disabled", "archived", "비활성"].includes(normalized)) return "비활성";
+  return "운영 중";
+}
+
+function saveStateLabel(state: "unchanged" | "dirty" | "saved" | "error") {
+  if (state === "dirty") return "저장 전 변경 있음";
+  if (state === "saved") return "저장 완료";
+  if (state === "error") return "저장 실패";
+  return "변경 없음";
+}
+
 export default function CustomerProvisioning() {
   const { couple, refreshRoom, roomId, systemAdmin } = useRoom();
   const requestConfirm = useConfirm();
@@ -53,6 +81,9 @@ export default function CustomerProvisioning() {
   const [startDate, setStartDate] = useState(toISODateInputValue(couple.startDate));
   const [adminPassword, setAdminPassword] = useState("");
   const [viewerPassword, setViewerPassword] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showViewerPassword, setShowViewerPassword] = useState(false);
+  const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -62,6 +93,52 @@ export default function CustomerProvisioning() {
   const deliveryText = useMemo(() => result ? credentialText(result) : "", [result]);
   const summary = useMemo(() => memberSummary(snapshot), [snapshot]);
   const busy = loadingSnapshot || saving || exporting || creating;
+  const hasUnsavedChanges = useMemo(() => {
+    const sourceNameA = snapshot?.nameA || couple.nameA;
+    const sourceNameB = snapshot?.nameB || couple.nameB;
+    const sourceStartDate = toISODateInputValue(snapshot?.startDate || couple.startDate);
+    return nameA !== sourceNameA || nameB !== sourceNameB || startDate !== sourceStartDate || Boolean(adminPassword || viewerPassword);
+  }, [adminPassword, couple.nameA, couple.nameB, couple.startDate, nameA, nameB, snapshot, startDate, viewerPassword]);
+  const saveState = status === "error" ? "error" : hasUnsavedChanges ? "dirty" : status === "success" ? "saved" : "unchanged";
+  const operationalInfo = snapshot?.operationalInfo;
+  const metricItems = useMemo(() => [
+    { label: "사진", value: formatCount(operationalInfo?.photoCount ?? null) },
+    { label: "메모", value: formatCount(operationalInfo?.memoCount ?? null) },
+    { label: "캘린더", value: formatCount(operationalInfo?.diaryCount ?? null) },
+    { label: "음악", value: formatCount(operationalInfo?.musicCount ?? null) },
+  ], [operationalInfo]);
+  const currentRoom = useMemo(() => ({
+    coupleCode: roomId || "",
+    nameA,
+    nameB,
+    status: roomStatusLabel(snapshot?.status),
+    lastUpdated: formatUpdatedAt(snapshot?.operationalInfo.lastUpdatedAt ?? null),
+    metrics: [
+      { label: "사진", value: formatCount(snapshot?.operationalInfo.photoCount ?? null) },
+      { label: "메모", value: formatCount(snapshot?.operationalInfo.memoCount ?? null) },
+      { label: "일정", value: formatCount(snapshot?.operationalInfo.diaryCount ?? null) },
+    ],
+  }), [nameA, nameB, roomId, snapshot]);
+  const createdRoom = useMemo(() => result ? {
+    coupleCode: result.coupleCode,
+    nameA: couple.nameA,
+    nameB: couple.nameB,
+    status: "테스트",
+    lastUpdated: "-",
+    metrics: [
+      { label: "사진", value: "-" },
+      { label: "메모", value: "-" },
+      { label: "일정", value: "-" },
+    ],
+  } : null, [couple.nameA, couple.nameB, result]);
+  const visibleRooms = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return [currentRoom, createdRoom].filter((room): room is typeof currentRoom => {
+      if (!room) return false;
+      if (!keyword) return true;
+      return `${room.nameA} ${room.nameB} ${room.coupleCode}`.toLowerCase().includes(keyword);
+    });
+  }, [createdRoom, currentRoom, search]);
 
   useEffect(() => {
     setNameA(couple.nameA);
@@ -116,7 +193,7 @@ export default function CustomerProvisioning() {
 
     setSaving(true);
     setStatus("idle");
-    setHint("커플룸 정보를 정돈하는 중이에요...");
+    setHint("저장 중...");
     try {
       await updateRoomManagement(roomId, {
         nameA: nameA.trim() || couple.nameA,
@@ -130,7 +207,7 @@ export default function CustomerProvisioning() {
       await loadSnapshot();
       await refreshRoom();
       setStatus("success");
-      setHint("커플룸 정보가 예쁘게 저장됐어요.");
+      setHint("저장됐어요. 고객 커플룸 정보가 최신 상태입니다.");
     } catch (caught) {
       console.error("Customer dashboard save failed", caught);
       setStatus("error");
@@ -229,7 +306,7 @@ export default function CustomerProvisioning() {
       <div className="customerDashboard__entry">
         <div>
           <div className="card__title">고객 커플룸</div>
-          <p className="hint">고객에게 전달되는 사랑의 공간을 차분하게 준비해요.</p>
+          <p className="hint">운영 중인 고객 공간을 확인하고 필요한 정보만 관리해요.</p>
         </div>
         <button className="btn btn--primary" type="button" onClick={() => setOpen((value) => !value)} disabled={busy}>
           {open ? "접기" : "커플룸 관리"}
@@ -240,18 +317,72 @@ export default function CustomerProvisioning() {
         <div className="customerDashboard__body" aria-busy={busy ? "true" : "false"}>
           {loadingSnapshot ? <p className="hint loadingHint">커플룸 정보를 불러오는 중...</p> : null}
 
+          <div className="customerDashboard__grid">
+            <section className="customerDashboard__section customerDashboard__section--list">
+              <div className="customerDashboard__sectionHead">
+                <span className="customerDashboard__icon customerDashboard__icon--soft" aria-hidden="true">＋</span>
+                <div>
+                  <h3>고객 목록</h3>
+                  <p>현재 관리 가능한 커플룸을 이름 또는 코드로 찾을 수 있어요.</p>
+                </div>
+              </div>
+              <label className="label customerDashboard__search">고객 검색<input className="input" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="커플 이름 또는 커플 코드" disabled={busy} /></label>
+              <div className="customerDashboard__list">
+                {visibleRooms.length > 0 ? visibleRooms.map((room) => (
+                  <div className="customerCard" key={room.coupleCode || `${room.nameA}-${room.nameB}`}>
+                    <div className="customerCard__top">
+                      <span className="customerCard__label">커플룸</span>
+                      <span className={`customerCard__badge customerCard__badge--${room.status === "비활성" ? "inactive" : room.status === "테스트" ? "test" : "active"}`}>{room.status}</span>
+                    </div>
+                    <strong>{room.nameA} · {room.nameB}</strong>
+                    <small>{room.coupleCode || "-"}</small>
+                    <div className="customerCard__meta">
+                      <span>업데이트 {room.lastUpdated}</span>
+                    </div>
+                    <div className="customerCard__stats">
+                      {room.metrics.map((item) => <span key={item.label}>{item.label} <b>{item.value}</b></span>)}
+                    </div>
+                  </div>
+                )) : <p className="customerDashboard__empty">검색 결과가 없습니다.</p>}
+              </div>
+            </section>
+
           <section className="customerDashboard__section customerDashboard__section--featured">
             <div className="customerDashboard__sectionHead">
               <span className="customerDashboard__icon" aria-hidden="true">♡</span>
               <div>
                 <h3>현재 커플룸</h3>
-                <p>{nameA}와 {nameB}의 이야기가 담길 공간이에요.</p>
+                <p>{nameA}와 {nameB}의 운영 정보를 확인하고 관리해요.</p>
               </div>
+            </div>
+
+            <div className="customerDashboard__statusRow">
+              <div className={`customerDashboard__state customerDashboard__state--${saveState}`}>
+                <span>저장 상태</span>
+                <strong>{saveStateLabel(saveState)}</strong>
+              </div>
+              <div className="customerDashboard__state customerDashboard__state--updated">
+                <span>마지막 업데이트</span>
+                <strong>{formatUpdatedAt(snapshot?.operationalInfo.lastUpdatedAt ?? null)}</strong>
+              </div>
+              <div className={`customerDashboard__state customerDashboard__state--${currentRoom.status === "비활성" ? "inactive" : currentRoom.status === "테스트" ? "test" : "active"}`}>
+                <span>룸 상태</span>
+                <strong>{currentRoom.status}</strong>
+              </div>
+            </div>
+
+            <div className="customerDashboard__metricChips">
+              {metricItems.map((item) => (
+                <div className="customerDashboard__metricChip" key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))}
             </div>
 
             <div className="customerDashboard__stats">
               <div><span>커플</span><strong>{nameA} · {nameB}</strong></div>
-              <div><span>초대 코드</span><strong>{roomId || "-"}</strong></div>
+              <div><span>커플 코드</span><strong>{roomId || "-"}</strong></div>
               <div><span>처음 만난 날</span><strong>{startDate}</strong></div>
               <div><span>함께 들어온 사람</span><strong>관리 {summary.admins}명 · 보기 {summary.viewers}명</strong></div>
             </div>
@@ -260,30 +391,27 @@ export default function CustomerProvisioning() {
               <label className="label">첫 번째 이름<input className="input" type="text" maxLength={8} value={nameA} onChange={(event) => setNameA(event.target.value)} disabled={busy} /></label>
               <label className="label">두 번째 이름<input className="input" type="text" maxLength={8} value={nameB} onChange={(event) => setNameB(event.target.value)} disabled={busy} /></label>
               <label className="label">우리 시작일<input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy} /></label>
-              <label className="label">관리자 초대 비밀번호<input className="input" type="password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder={snapshot?.hasAdminPassword ? "바꿀 때만 입력" : "새 비밀번호"} disabled={busy} /></label>
-              <label className="label">보기 전용 비밀번호<input className="input" type="password" value={viewerPassword} onChange={(event) => setViewerPassword(event.target.value)} placeholder={snapshot?.hasViewerPassword ? "바꿀 때만 입력" : "새 비밀번호"} disabled={busy} /></label>
+              <label className="label customerDashboard__passwordLabel">
+                관리자 초대 비밀번호
+                <span className="customerDashboard__passwordWrap">
+                  <input className="input" type={showAdminPassword ? "text" : "password"} value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder={snapshot?.hasAdminPassword ? "바꿀 때만 입력" : "새 비밀번호"} disabled={busy} autoComplete="new-password" />
+                  <button className="customerDashboard__toggle" type="button" onClick={() => setShowAdminPassword((value) => !value)} disabled={busy} aria-label={showAdminPassword ? "관리자 비밀번호 숨기기" : "관리자 비밀번호 보기"}>{showAdminPassword ? "숨김" : "보기"}</button>
+                </span>
+                <small>비워두면 기존 비밀번호를 유지합니다.</small>
+              </label>
+              <label className="label customerDashboard__passwordLabel">
+                보기 전용 비밀번호
+                <span className="customerDashboard__passwordWrap">
+                  <input className="input" type={showViewerPassword ? "text" : "password"} value={viewerPassword} onChange={(event) => setViewerPassword(event.target.value)} placeholder={snapshot?.hasViewerPassword ? "바꿀 때만 입력" : "새 비밀번호"} disabled={busy} autoComplete="new-password" />
+                  <button className="customerDashboard__toggle" type="button" onClick={() => setShowViewerPassword((value) => !value)} disabled={busy} aria-label={showViewerPassword ? "보기 비밀번호 숨기기" : "보기 비밀번호 보기"}>{showViewerPassword ? "숨김" : "보기"}</button>
+                </span>
+                <small>비워두면 기존 비밀번호를 유지합니다.</small>
+              </label>
               <div className="row">
-                <button className="btn btn--primary" type="submit" disabled={busy}>{saving ? "저장 중..." : "커플룸 저장"}</button>
+                <button className="btn btn--primary" type="submit" disabled={busy || !hasUnsavedChanges}>{saving ? "저장 중..." : "커플룸 저장"}</button>
                 <button className="btn btn--soft" type="button" onClick={handleExport} disabled={busy}>{exporting ? "내보내는 중..." : "기록 내보내기"}</button>
               </div>
             </form>
-          </section>
-
-          <section className="customerDashboard__section">
-            <div className="customerDashboard__sectionHead">
-              <span className="customerDashboard__icon customerDashboard__icon--soft" aria-hidden="true">＋</span>
-              <div>
-                <h3>고객 목록</h3>
-                <p>앞으로 여러 커플룸을 한눈에 살펴볼 수 있도록 준비해두었어요.</p>
-              </div>
-            </div>
-            <div className="customerDashboard__list">
-              <div className="customerCard">
-                <span className="customerCard__label">운영 중인 커플룸</span>
-                <strong>{nameA} · {nameB}</strong>
-                <small>{roomId}</small>
-              </div>
-            </div>
           </section>
 
           <section className="customerDashboard__section customerDashboard__section--invite">
@@ -319,8 +447,9 @@ export default function CustomerProvisioning() {
               </section>
             ) : null}
           </section>
+          </div>
 
-          <p className={`customerDashboard__hint${status === "success" ? " customerDashboard__hint--success" : ""}${status === "error" ? " customerDashboard__hint--error" : ""}`}>{hint}</p>
+          <p className={`customerDashboard__hint customerDashboard__hint--${saveState}${status === "success" ? " customerDashboard__hint--success" : ""}${status === "error" ? " customerDashboard__hint--error" : ""}`}>{hint}</p>
         </div>
       ) : null}
     </article>

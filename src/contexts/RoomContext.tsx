@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { INTRO_PENDING_KEY } from "../constants/intro";
 import { ensureAuth } from "../services/authService";
 import { DEFAULT_CONFIG, ensureRoomMember, getExistingRoomConfig, getExistingRoomMemberRole, getRoomConfig, migrateValidatedRoomPassword, normalizeCoupleCode, resolveCoupleCode, resolveExistingLoginRoom, saveRoomConfig, validateRoomPassword, type RoomRole } from "../services/roomService";
 import { isCurrentUserSystemAdmin } from "../services/systemAdminService";
@@ -130,6 +131,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(SESSION_KEY, "1");
         sessionStorage.setItem(ROOM_KEY, activeCode);
         sessionStorage.setItem(ROLE_KEY, nextRole);
+        sessionStorage.setItem(INTRO_PENDING_KEY, "1");
         setCoupleCode(activeCode);
         setCouple(config);
         setUnlocked(true);
@@ -158,6 +160,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(SESSION_KEY, "1");
       sessionStorage.setItem(ROOM_KEY, activeCode);
       sessionStorage.setItem(ROLE_KEY, nextRole);
+      sessionStorage.setItem(INTRO_PENDING_KEY, "1");
       setCoupleCode(activeCode);
       setCouple(config);
       setUnlocked(true);

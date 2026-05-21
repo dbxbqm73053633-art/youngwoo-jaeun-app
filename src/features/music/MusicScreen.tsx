@@ -4,7 +4,7 @@ import { useMusic } from "../../hooks/useMusic";
 import LyricsPanel from "../../components/music/LyricsPanel";
 import MusicMiniBar from "../../components/music/MusicMiniBar";
 import MusicPlayer from "../../components/music/MusicPlayer";
-import { INTRO_SEEN_KEY } from "../../constants/intro";
+import { INTRO_PENDING_KEY, INTRO_SEEN_KEY } from "../../constants/intro";
 import { useRoom } from "../../contexts/RoomContext";
 import { parseLrc } from "../../services/musicService";
 
@@ -108,7 +108,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
     if (!unlocked) return;
 
     let handledGesture = false;
-    const shouldFadeIn = localStorage.getItem(INTRO_SEEN_KEY) !== "1";
+    const shouldFadeIn = sessionStorage.getItem(INTRO_PENDING_KEY) === "1" || sessionStorage.getItem(INTRO_SEEN_KEY) !== "1";
     const targetVolume = volume;
     let fadeFrame = 0;
 

@@ -1,4 +1,4 @@
-import { lazy, useMemo, useState } from "react";
+import { lazy, useCallback, useMemo, useState } from "react";
 import AppLayout from "./components/layout/AppLayout";
 import ConfigurationFallback from "./components/layout/ConfigurationFallback";
 import { ModalProvider } from "./components/layout/ModalProvider";
@@ -28,6 +28,7 @@ function ReactApp() {
   const { couple, isConfigured, roomId } = useRoom();
   const { counter } = useHomeData(roomId, couple);
   const dday = useMemo(() => counter.headerDDay || counter.dday, [counter.dday, counter.headerDDay]);
+  const handleIntroComplete = useCallback(() => setActiveTab("home"), []);
 
   if (!hasFirebaseConfig || !isConfigured) {
     return <ConfigurationFallback roomPasswordConfigured={isConfigured} />;
@@ -35,7 +36,7 @@ function ReactApp() {
 
   return (
     <ModalProvider>
-      <AppLayout activeTab={activeTab} dday={dday} onTabChange={setActiveTab}>
+      <AppLayout activeTab={activeTab} dday={dday} onIntroComplete={handleIntroComplete} onTabChange={setActiveTab}>
         <ActiveTabScreen activeTab={activeTab} />
       </AppLayout>
       <MusicScreen />

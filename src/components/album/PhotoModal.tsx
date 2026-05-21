@@ -4,24 +4,30 @@ import type { PhotoRecord } from "../../types";
 
 type PhotoModalProps = {
   photo: PhotoRecord | null;
+  photos?: PhotoRecord[];
+  currentIndex?: number;
   editable?: boolean;
   onClose: () => void;
   onNext: () => void;
   onPrev: () => void;
+  onSelectIndex?: (index: number) => void;
   onDelete: (id: string) => Promise<void>;
   onSetCover: (id: string) => Promise<void>;
   onSave: (patch: Partial<PhotoRecord>) => Promise<void>;
 };
 
-export default function PhotoModal({ photo, editable = true, onClose, onNext, onPrev, onDelete, onSetCover, onSave }: PhotoModalProps) {
+export default function PhotoModal({ photo, photos = [], currentIndex = 0, editable = true, onClose, onNext, onPrev, onSelectIndex, onDelete, onSetCover, onSave }: PhotoModalProps) {
   const [album, setAlbum] = useState("");
   const [date, setDate] = useState("");
   const [caption, setCaption] = useState("");
   const [memo, setMemo] = useState("");
   const [hint, setHint] = useState("수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)");
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadStatus, setDownloadStatus] = useState<"idle" | "success" | "error">("idle");
   const [zoom, setZoom] = useState(1);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [dragX, setDragX] = useState(0);
   const touchStartX = useRef<number | null>(null);
@@ -36,8 +42,11 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
     setMemo(photo.memo || "");
     setHint("수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)");
     setSaving(false);
+    setDownloading(false);
+    setDownloadStatus("idle");
     setZoom(1);
-    setIsSettingsOpen(false);
+    setIsActionSheetOpen(false);
+    setIsEditSheetOpen(false);
     setIsImageLoaded(false);
     setDragX(0);
     window.requestAnimationFrame(() => panelRef.current?.focus());
@@ -60,6 +69,7 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
         memo: memo.trim(),
       });
       setHint("저장 완료 ♡");
+      setIsEditSheetOpen(false);
     } catch {
       setHint("저장하지 못했어요. 잠시 후 다시 시도해주세요.");
     } finally {
@@ -68,10 +78,20 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") onClose();
+    if (event.key === "Escape") {
+      if (isEditSheetOpen) {
+        setIsEditSheetOpen(false);
+        return;
+      }
+      if (isActionSheetOpen) {
+        setIsActionSheetOpen(false);
+        return;
+      }
+      onClose();
+    }
     if (event.key === "ArrowLeft") onPrev();
     if (event.key === "ArrowRight") onNext();
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    if (isEditSheetOpen && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       void handleSave();
     }
@@ -131,13 +151,44 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
     setZoom((current) => Math.min(3, Math.max(1, current + (event.deltaY < 0 ? 0.12 : -0.12))));
   };
 
-  const handleDownload = () => {
+  const downloadFileName = () => {
+    const baseName = (photo?.caption || photo?.name || "memory")
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .replace(/\s+/g, "-")
+      .slice(0, 80) || "memory";
+    return `${baseName}.jpg`;
+  };
+
+  const handleDownload = async () => {
     if (!photo) return;
-    const link = document.createElement("a");
-    link.href = photo.url;
-    link.download = `${photo.caption || photo.name || "memory"}.jpg`;
-    link.rel = "noopener";
-    link.click();
+    setDownloading(true);
+    setDownloadStatus("idle");
+    setHint("다운로드 중...");
+    try {
+      const response = await fetch(photo.url, { mode: "cors", credentials: "omit" });
+      if (!response.ok) throw new Error("Image fetch failed");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = downloadFileName();
+      link.rel = "noopener";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setDownloadStatus("success");
+      setHint("다운로드를 시작했어요.");
+    } catch {
+      setDownloadStatus("error");
+      setHint("다운로드가 막혀 새 창으로 열었어요.");
+      window.open(photo.url, "_blank", "noopener,noreferrer");
+    } finally {
+      setDownloading(false);
+      window.setTimeout(() => setDownloadStatus("idle"), 2400);
+    }
   };
 
   const handleDelete = async () => {
@@ -151,7 +202,20 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
     setHint("대표사진으로 설정 중...");
     await onSetCover(photo.id);
     setHint("대표사진으로 설정했어요 ♡");
+    setIsActionSheetOpen(false);
   };
+
+  const openEditSheet = () => {
+    setIsActionSheetOpen(false);
+    setIsEditSheetOpen(true);
+    setHint("수정 후 저장을 눌러주세요. (Ctrl/Cmd + S 가능)");
+  };
+
+  const photoCountLabel = photos.length ? `${currentIndex + 1} / ${photos.length}` : "1 / 1";
+  const visibleThumbs = photos.length > 8
+    ? photos.slice(Math.max(0, Math.min(currentIndex - 3, photos.length - 8)), Math.max(0, Math.min(currentIndex - 3, photos.length - 8)) + 8)
+    : photos;
+  const visibleThumbStart = photos.length > 8 ? Math.max(0, Math.min(currentIndex - 3, photos.length - 8)) : 0;
 
   return (
     <div className={`lightbox${photo ? " show" : ""}`} id="lightbox" aria-hidden={photo ? "false" : "true"} onKeyDown={handleKeyDown}>
@@ -159,13 +223,30 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
 
       <div className="lightbox__center">
         <div ref={panelRef} className="lightbox__panel lightbox__panel--gallery" role="dialog" aria-modal="true" aria-label="사진 크게 보기" tabIndex={-1}>
-          <button className="lightbox__close iconBtn" type="button" data-lb-close="1" aria-label="닫기" onClick={onClose}>×</button>
-          <button className="lightbox__nav lightbox__nav--prev" type="button" id="lbPrev" aria-label="이전 사진" onClick={onPrev}>‹</button>
-          <button className="lightbox__nav lightbox__nav--next" type="button" id="lbNext" aria-label="다음 사진" onClick={onNext}>›</button>
+          <div className="lightbox__topbar">
+            <button className="lightbox__close iconBtn" type="button" data-lb-close="1" aria-label="닫기" onClick={onClose}>×</button>
+            <div className="lightbox__counter" aria-label="사진 위치">{photoCountLabel}</div>
+            <button
+              className="lightbox__settingsBtn"
+              type="button"
+              aria-expanded={isActionSheetOpen}
+              aria-label="사진 작업 열기"
+              onClick={() => setIsActionSheetOpen(true)}
+            >
+              ⋯
+            </button>
+          </div>
 
           <div className="lightbox__stage" id="lbStage" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onWheel={handleWheel}>
-            {photo ? <img className={`lightbox__img${isImageLoaded ? " is-loaded" : ""}`} id="lbImg" src={photo.url} alt={photo.caption || "사진 크게 보기"} draggable="false" decoding="async" fetchpriority="high" onLoad={() => setIsImageLoaded(true)} style={{ transform: `translate3d(${dragX}px, 0, 0) scale(${zoom})` }} /> : null}
+            {photo ? (
+              <>
+                <img className="lightbox__bgImg" src={photo.url} alt="" aria-hidden="true" draggable="false" decoding="async" />
+                <img className={`lightbox__img${isImageLoaded ? " is-loaded" : ""}`} id="lbImg" src={photo.url} alt={photo.caption || "사진 크게 보기"} draggable="false" decoding="async" fetchpriority="high" onLoad={() => setIsImageLoaded(true)} style={{ transform: `translate3d(${dragX}px, 0, 0) scale(${zoom})` }} />
+              </>
+            ) : null}
           </div>
+          <button className="lightbox__edgeNav lightbox__edgeNav--prev" type="button" id="lbPrev" aria-label="이전 사진" onClick={onPrev}>‹</button>
+          <button className="lightbox__edgeNav lightbox__edgeNav--next" type="button" id="lbNext" aria-label="다음 사진" onClick={onNext}>›</button>
 
           <div className="lightbox__meta lightbox__meta--premium">
             <div className="lightbox__summary">
@@ -175,52 +256,106 @@ export default function PhotoModal({ photo, editable = true, onClose, onNext, on
               {photo?.memo ? <p>{photo.memo}</p> : null}
             </div>
 
-            <div className="lightbox__actions">
-              <button className="btn btn--soft" type="button" onClick={handleDownload}>다운로드</button>
-              {editable ? (
-                <button
-                  className="lightbox__settingsBtn"
-                  type="button"
-                  aria-expanded={isSettingsOpen}
-                  aria-label="사진 설정"
-                  onClick={() => setIsSettingsOpen((current) => !current)}
-                >
-                  ⋯
-                </button>
-              ) : null}
+            <div className="lightbox__bottomControls" aria-label="사진 이동">
+              <button className="lightbox__bottomNav" type="button" aria-label="이전 사진" onClick={onPrev}>이전</button>
+              <button className="lightbox__bottomNav" type="button" aria-label="다음 사진" onClick={onNext}>다음</button>
             </div>
 
-            {editable ? <div className={`lightbox__editPanel${isSettingsOpen ? " show" : ""}`}>
-              <div className="lightbox__editActions">
-                <button className="btn btn--soft" type="button" onClick={handleSetCover} disabled={photo?.isCover}>{photo?.isCover ? "대표사진" : "대표사진으로 설정"}</button>
-                <button className="btn btn--danger" type="button" onClick={handleDelete}>삭제</button>
+            {visibleThumbs.length > 1 ? (
+              <div className="lightbox__thumbs" aria-label="사진 미리보기">
+                {visibleThumbs.map((item, offset) => {
+                  const index = visibleThumbStart + offset;
+                  return (
+                    <button className={`lightbox__thumb${index === currentIndex ? " is-active" : ""}`} type="button" key={item.id || item.url} aria-label={`${index + 1}번째 사진 보기`} onClick={() => onSelectIndex?.(index)}>
+                      <img src={item.thumbnailUrl || item.url} alt="" loading="lazy" />
+                    </button>
+                  );
+                })}
               </div>
-              <div className="lightbox__form" aria-label="사진 정보 수정">
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {isActionSheetOpen ? (
+        <div className="photoActionSheet" role="dialog" aria-modal="true" aria-label="사진 작업">
+          <button className="photoActionSheet__scrim" type="button" aria-label="사진 작업 닫기" onClick={() => setIsActionSheetOpen(false)} />
+          <div className="photoActionSheet__panel">
+            <div className="photoActionSheet__handle" aria-hidden="true" />
+            <div className="photoActionSheet__head">
+              <span>{photo?.album || "기본앨범"}</span>
+              <strong>{photo?.caption || "사진 작업"}</strong>
+            </div>
+            <div className="photoActionSheet__actions">
+              <button className="photoActionSheet__item" type="button" onClick={() => void handleDownload()} disabled={downloading}>
+                <span>{downloading ? "다운로드 중..." : "다운로드"}</span>
+                <small>사진을 기기에 저장합니다</small>
+              </button>
+              {editable ? (
+                <>
+                  <button className="photoActionSheet__item" type="button" onClick={handleSetCover} disabled={photo?.isCover}>
+                    <span>{photo?.isCover ? "이미 대표사진입니다" : "대표사진으로 설정"}</span>
+                    <small>앨범과 홈 화면의 기준 사진</small>
+                  </button>
+                  <button className="photoActionSheet__item" type="button" onClick={openEditSheet}>
+                    <span>사진 정보 수정</span>
+                    <small>앨범, 날짜, 캡션, 메모</small>
+                  </button>
+                  <button className="photoActionSheet__item photoActionSheet__item--danger" type="button" onClick={handleDelete}>
+                    <span>사진 삭제</span>
+                    <small>삭제 후에는 복구할 수 없습니다</small>
+                  </button>
+                </>
+              ) : null}
+            </div>
+            <button className="photoActionSheet__cancel" type="button" onClick={() => setIsActionSheetOpen(false)}>취소</button>
+          </div>
+        </div>
+      ) : null}
+
+      {editable && isEditSheetOpen ? (
+        <div className="photoEditSheet" role="dialog" aria-modal="true" aria-label="사진 정보 수정">
+          <button className="photoEditSheet__scrim" type="button" aria-label="사진 정보 수정 닫기" onClick={() => setIsEditSheetOpen(false)} />
+          <div className="photoEditSheet__panel">
+            <div className="photoEditSheet__head">
+              <div>
+                <span>사진 정보</span>
+                <strong>보기 화면과 분리해서 수정해요</strong>
+              </div>
+              <button className="photoEditSheet__close" type="button" aria-label="닫기" onClick={() => setIsEditSheetOpen(false)}>×</button>
+            </div>
+            <div className="lightbox__form photoEditSheet__form">
               <label className="lbLabel">
                 앨범
                 <input id="lbAlbum" className="input" type="text" value={album} onChange={(event) => setAlbum(event.target.value)} />
               </label>
-              <div className="lbRow">
-                <label className="lbLabel">
-                  사진 날짜
-                  <input id="lbDate" className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-                </label>
-                <button className="btn btn--soft" type="button" id="lbSave" onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</button>
-              </div>
+              <label className="lbLabel">
+                사진 날짜
+                <input id="lbDate" className="input" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+              </label>
               <label className="lbLabel">
                 캡션
                 <input id="lbCaptionInput" className="input" type="text" maxLength={60} value={caption} onChange={(event) => setCaption(event.target.value)} />
               </label>
               <label className="lbLabel">
                 메모
-                <textarea className="textarea" rows={3} maxLength={180} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 사진에 남기고 싶은 마음" />
+                <textarea className="textarea" rows={4} maxLength={180} value={memo} onChange={(event) => setMemo(event.target.value)} placeholder="이 사진에 남기고 싶은 마음" />
               </label>
-              <div className="lightbox__saveHint" id="lbSaveHint">{hint} · 확대 {Math.round(zoom * 100)}%</div>
+              <div className="photoEditSheet__hint">{hint}</div>
+              <div className="photoEditSheet__actions">
+                <button className="btn btn--soft" type="button" onClick={() => setIsEditSheetOpen(false)}>취소</button>
+                <button className="btn btn--primary" type="button" id="lbSave" onClick={handleSave} disabled={saving}>{saving ? "저장 중..." : "저장"}</button>
               </div>
-            </div> : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
+
+      {downloadStatus !== "idle" || downloading ? (
+        <div className={`photoDownloadToast photoDownloadToast--${downloadStatus}`} role="status" aria-live="polite">
+          {downloading ? "다운로드 중..." : hint}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { FieldPath, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { FieldPath, collection, deleteField, doc, getCountFromServer, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { ensureAuth } from "./authService";
 import { TEMPLATE_DEFAULTS, safeDate } from "../constants/templateConfig";
 import { db } from "../lib/firebase";
@@ -312,6 +312,14 @@ export type RoomManagementSnapshot = {
   members: Record<string, { role?: RoomRole; joinedAt?: number; createdAt?: number; provisioner?: boolean }>;
   hasAdminPassword: boolean;
   hasViewerPassword: boolean;
+  status?: string;
+  operationalInfo: {
+    photoCount: number | null;
+    memoCount: number | null;
+    diaryCount: number | null;
+    musicCount: number | null;
+    lastUpdatedAt: number | null;
+  };
 };
 
 export async function getRoomManagementSnapshot(coupleCode: string): Promise<RoomManagementSnapshot | null> {
@@ -319,6 +327,32 @@ export async function getRoomManagementSnapshot(coupleCode: string): Promise<Roo
   if (!snap.exists()) return null;
 
   const data = snap.data();
+  const cleanRoomId = resolveRoomId(coupleCode);
+  const countCollection = async (collectionName: string) => {
+    try {
+      const countSnap = await getCountFromServer(collection(db, "rooms", cleanRoomId, collectionName));
+      return countSnap.data().count;
+    } catch {
+      return null;
+    }
+  };
+  const [photoCount, memoCount, diaryCount] = await Promise.all([
+    countCollection("photos"),
+    countCollection("memos"),
+    countCollection("diaries"),
+  ]);
+  const musicTracks = Array.isArray(data.musicTracks) ? data.musicTracks : null;
+  const musicCount = musicTracks ? musicTracks.length : (data.musicSrc ? 1 : null);
+  const updatedAt = data.updatedAt;
+  const createdAt = data.createdAt;
+  const lastUpdatedAt = typeof updatedAt === "number"
+    ? updatedAt
+    : typeof createdAt === "number"
+      ? createdAt
+      : createdAt && typeof createdAt === "object" && "toMillis" in createdAt && typeof createdAt.toMillis === "function"
+        ? createdAt.toMillis()
+        : null;
+
   return {
     coupleCode: String(data.coupleCode || coupleCode),
     nameA: String(data.nameA || DEFAULT_CONFIG.nameA),
@@ -327,6 +361,14 @@ export async function getRoomManagementSnapshot(coupleCode: string): Promise<Roo
     members: (data.members || {}) as RoomManagementSnapshot["members"],
     hasAdminPassword: Boolean(data.adminPasswordHash || data.roomPasswordHash || data.passwordHash),
     hasViewerPassword: Boolean(data.viewerPasswordHash),
+    status: typeof data.status === "string" ? data.status : undefined,
+    operationalInfo: {
+      photoCount,
+      memoCount,
+      diaryCount,
+      musicCount,
+      lastUpdatedAt,
+    },
   };
 }
 
