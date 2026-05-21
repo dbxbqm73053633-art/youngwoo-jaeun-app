@@ -1,5 +1,5 @@
 .appBoot {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   font-family: "Pretendard", "Inter", system-ui, sans-serif;

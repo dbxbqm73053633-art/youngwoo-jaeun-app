@@ -11,11 +11,13 @@ type MusicMiniBarProps = {
   subtitle?: string;
   trackPosition?: string;
   title?: string;
+  volume: number;
   onNextTrack?: () => void;
   onPreviousTrack?: () => void;
   onSeek: (time: number) => void;
   onToggleLyrics: () => void;
   onTogglePlayback: () => void;
+  onVolumeChange: (volume: number) => void;
 };
 
 export default function MusicMiniBar({
@@ -28,13 +30,17 @@ export default function MusicMiniBar({
   subtitle = TEMPLATE_DEFAULTS.musicMeta,
   trackPosition,
   title = TEMPLATE_DEFAULTS.musicTitle,
+  volume,
   onNextTrack,
   onPreviousTrack,
   onSeek,
   onToggleLyrics,
   onTogglePlayback,
+  onVolumeChange,
 }: MusicMiniBarProps) {
   const progress = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+  const volumeProgress = Math.min(100, Math.max(0, volume * 100));
+  const volumeLabel = volume <= 0 ? "음소거 해제" : "음소거";
 
   return (
     <div className={`music${isPlaying ? " music--playing" : ""}`} aria-label="배경음악 컨트롤">
@@ -57,9 +63,7 @@ export default function MusicMiniBar({
             aria-label="이전 곡"
             disabled={!onPreviousTrack}
             onClick={onPreviousTrack}
-          >
-            ‹
-          </button>
+          />
           <button
             className="music__btn"
             id="musicToggle"
@@ -76,13 +80,33 @@ export default function MusicMiniBar({
             aria-label="다음 곡"
             disabled={!onNextTrack}
             onClick={onNextTrack}
-          >
-            ›
-          </button>
+          />
 
           <button className="music__lyricsBtn" id="lyricsToggle" type="button" onClick={onToggleLyrics}>
             가사
           </button>
+
+          <div className="music__volume" aria-label="음량 조절">
+            <button
+              className="music__muteBtn"
+              type="button"
+              aria-label={volumeLabel}
+              onClick={() => onVolumeChange(volume <= 0 ? 0.5 : 0)}
+            >
+              {volume <= 0 ? "×" : "♪"}
+            </button>
+            <input
+              className="music__vol"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              style={{ "--music-volume": `${volumeProgress}%` } as CSSProperties}
+              aria-label="음량"
+              onChange={(event) => onVolumeChange(Number(event.target.value))}
+            />
+          </div>
         </div>
       </div>
 

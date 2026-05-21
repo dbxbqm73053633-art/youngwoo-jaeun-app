@@ -133,10 +133,10 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
       const duration = 2600;
       const tick = (now: number) => {
         const progress = Math.min(1, (now - startedAt) / duration);
-        setVolume(targetVolume * progress);
+        setVolume(targetVolume * progress, false);
         if (progress < 1) fadeFrame = window.requestAnimationFrame(tick);
       };
-      setVolume(0);
+      setVolume(0, false);
       fadeFrame = window.requestAnimationFrame(tick);
     };
 
@@ -144,7 +144,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
       if (!hasAudio) return false;
       if (!audioRef.current?.paused) return true;
       try {
-        if (shouldFadeIn) setVolume(0);
+        if (shouldFadeIn) setVolume(0, false);
         await play();
         fadeInMusic();
         return true;
@@ -195,6 +195,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
         subtitle={currentTrack?.subtitle}
         trackPosition={trackPosition}
         title={currentTrack?.title}
+        volume={volume}
         onNextTrack={tracks.length > 1 ? () => playTrackOffset(1) : undefined}
         onPreviousTrack={tracks.length > 1 ? () => playTrackOffset(-1) : undefined}
         onSeek={seek}
@@ -203,6 +204,7 @@ export default function MusicScreen({ onReady }: MusicScreenProps) {
           if (!hasAudio) return;
           void togglePlayback().catch(() => setIsPlaying(false));
         }}
+        onVolumeChange={setVolume}
       />
       <LyricsPanel
         activeLyricIndex={activeLyricIndex}

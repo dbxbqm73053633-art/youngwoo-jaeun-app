@@ -9,6 +9,7 @@ import OnboardingGuide from "./OnboardingGuide";
 import { TEMPLATE_DEFAULTS } from "../../constants/templateConfig";
 import { useRoom } from "../../contexts/RoomContext";
 import type { AppTab } from "../../types/navigation";
+import { recoverViewportAfterFullscreen, updateViewportHeightVar } from "../../utils/viewportRecovery";
 
 type AppLayoutProps = {
   activeTab: AppTab;
@@ -24,6 +25,19 @@ export default function AppLayout({ activeTab, children, dday, onIntroComplete, 
   useEffect(() => {
     document.title = couple.appTitle || TEMPLATE_DEFAULTS.appName;
   }, [couple.appTitle]);
+
+  useEffect(() => {
+    updateViewportHeightVar();
+    window.visualViewport?.addEventListener("resize", updateViewportHeightVar);
+    window.addEventListener("resize", updateViewportHeightVar);
+    window.addEventListener("orientationchange", recoverViewportAfterFullscreen);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateViewportHeightVar);
+      window.removeEventListener("resize", updateViewportHeightVar);
+      window.removeEventListener("orientationchange", recoverViewportAfterFullscreen);
+    };
+  }, []);
 
   return (
     <>

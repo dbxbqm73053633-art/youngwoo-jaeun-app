@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { INTRO_PENDING_KEY, INTRO_SEEN_KEY } from "../../constants/intro";
 import { useRoom } from "../../contexts/RoomContext";
+import { recoverViewportAfterFullscreen } from "../../utils/viewportRecovery";
 
 type CinematicIntroProps = {
   onComplete?: () => void;
@@ -35,6 +36,7 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
       sessionStorage.removeItem(INTRO_PENDING_KEY);
       sessionStorage.setItem(INTRO_SEEN_KEY, "1");
       setVisible(false);
+      recoverViewportAfterFullscreen();
       onComplete?.();
     }, INTRO_DURATION_MS);
     return () => window.clearTimeout(timer);
@@ -49,6 +51,7 @@ export default function CinematicIntro({ onComplete }: CinematicIntroProps) {
     sessionStorage.removeItem(INTRO_PENDING_KEY);
     sessionStorage.setItem(INTRO_SEEN_KEY, "1");
     setVisible(false);
+    recoverViewportAfterFullscreen();
     onComplete?.();
   };
 

@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { findActiveLyricIndex, findDisplayLyric, type LyricTiming } from "../services/musicService";
 
+const MUSIC_VOLUME_KEY = "coupleMusicVolume";
+const DEFAULT_VOLUME = 0.5;
+
+function readSavedVolume() {
+  if (typeof window === "undefined") return DEFAULT_VOLUME;
+  const saved = window.localStorage.getItem(MUSIC_VOLUME_KEY);
+  if (saved === null) return DEFAULT_VOLUME;
+  const parsed = Number(saved);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : DEFAULT_VOLUME;
+}
+
 export function useMusic(lyrics: LyricTiming[] = [], lyricOffsetMs = 0) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolumeState] = useState(0.6);
+  const [volume, setVolumeState] = useState(readSavedVolume);
   const [activeLyricIndex, setActiveLyricIndex] = useState(-1);
 
   const currentLyric = useMemo(
@@ -18,6 +29,10 @@ export function useMusic(lyrics: LyricTiming[] = [], lyricOffsetMs = 0) {
     setCurrentTime(0);
     setActiveLyricIndex(-1);
   }, [lyrics]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
 
   const syncLyrics = useCallback((nextTime: number) => {
     setCurrentTime(nextTime);
@@ -54,10 +69,13 @@ export function useMusic(lyrics: LyricTiming[] = [], lyricOffsetMs = 0) {
     else pause();
   }, [pause, play]);
 
-  const setVolume = useCallback((nextVolume: number) => {
+  const setVolume = useCallback((nextVolume: number, persist = true) => {
     const clamped = Math.max(0, Math.min(1, nextVolume));
     setVolumeState(clamped);
     if (audioRef.current) audioRef.current.volume = clamped;
+    if (persist && typeof window !== "undefined") {
+      window.localStorage.setItem(MUSIC_VOLUME_KEY, String(clamped));
+    }
   }, []);
 
   const seek = useCallback((nextTime: number) => {
